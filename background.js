@@ -302,6 +302,12 @@ function createContextMenus() {
 // 시스템 알림 표시
 function showNotification(title, message) {
   try {
+    // title과 message가 유효한지 확인
+    if (!title || !message) {
+      console.warn('[Notification] ⚠️ 알림 제목 또는 메시지가 비어있음:', { title, message });
+      return;
+    }
+
     chrome.notifications.create('torrent-' + Date.now(), {
       type: 'basic',
       title: title,
