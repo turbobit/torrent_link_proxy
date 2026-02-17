@@ -3,7 +3,7 @@ function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get('transmissionSettings', (data) => {
       const settings = data.transmissionSettings || {
-        serverUrl: 'http://192.168.0.201:9091',
+        serverUrl: '',
         username: '',
         password: ''
       };
