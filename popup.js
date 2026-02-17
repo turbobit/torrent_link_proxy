@@ -1,3 +1,25 @@
+// i18n 메시지 로드 유틸리티 함수
+function loadI18nMessages() {
+  const elements = document.querySelectorAll('[data-i18n]');
+  elements.forEach(element => {
+    const messageKey = element.getAttribute('data-i18n');
+    const message = chrome.i18n.getMessage(messageKey);
+    if (message) {
+      element.textContent = message;
+    }
+  });
+
+  // placeholder 속성 처리
+  const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
+  placeholderElements.forEach(element => {
+    const messageKey = element.getAttribute('data-i18n-placeholder');
+    const message = chrome.i18n.getMessage(messageKey);
+    if (message) {
+      element.placeholder = message;
+    }
+  });
+}
+
 // 설정 로드
 function getSettings() {
   return new Promise((resolve) => {
@@ -83,6 +105,9 @@ async function testConnection(serverUrl, username, password) {
 
 // 팝업이 로드될 때 실행
 document.addEventListener('DOMContentLoaded', () => {
+  // i18n 메시지 로드
+  loadI18nMessages();
+
   const statusDiv = document.getElementById('status');
   const serverStatusEl = document.getElementById('serverStatus');
   const serverUrlEl = document.getElementById('serverUrl');
@@ -99,11 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(result => {
         if (result.success) {
           statusDiv.className = 'status connected';
-          serverStatusEl.textContent = `연결됨 (v${result.version})`;
+          serverStatusEl.textContent = `${chrome.i18n.getMessage('statusConnected')} (v${result.version})`;
           serverStatusEl.style.color = '#28a745';
         } else {
           statusDiv.className = 'status disconnected';
-          serverStatusEl.textContent = '연결 끊김';
+          serverStatusEl.textContent = chrome.i18n.getMessage('statusDisconnected');
           serverStatusEl.style.color = '#dc3545';
         }
       });

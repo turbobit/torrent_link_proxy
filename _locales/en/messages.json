@@ -1,0 +1,230 @@
+{
+  "appName": {
+    "message": "Transmission URL Supporter",
+    "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "Right-click to upload magnet links or torrent files to Transmission server",
+    "description": "Extension description"
+  },
+
+  // Popup UI
+  "popupTitle": {
+    "message": "Transmission URL Supporter",
+    "description": "Popup window title"
+  },
+  "serverStatus": {
+    "message": "Server Status:",
+    "description": "Server status label"
+  },
+  "serverUrl": {
+    "message": "Server URL:",
+    "description": "Server URL label"
+  },
+  "checking": {
+    "message": "Checking...",
+    "description": "Status when checking connection"
+  },
+  "checkConnection": {
+    "message": "Check Connection",
+    "description": "Check connection button text"
+  },
+  "checkingConnection": {
+    "message": "Checking...",
+    "description": "Text when checking connection"
+  },
+  "instructions": {
+    "message": "Instructions:",
+    "description": "Instructions section title"
+  },
+  "instruction1": {
+    "message": "1. Configure Transmission server URL",
+    "description": "First instruction"
+  },
+  "instruction2": {
+    "message": "2. Select torrent link or hash",
+    "description": "Second instruction"
+  },
+  "instruction3": {
+    "message": "3. Right-click and select 'Upload to Transmission'",
+    "description": "Third instruction"
+  },
+
+  // Options page
+  "settingsTitle": {
+    "message": "Transmission URL Supporter Settings",
+    "description": "Options page title"
+  },
+  "serverUrlLabel": {
+    "message": "Transmission Server URL",
+    "description": "Server URL input label"
+  },
+  "serverUrlPlaceholder": {
+    "message": "e.g.: http://example.com:9091/transmission",
+    "description": "Server URL input placeholder"
+  },
+  "serverUrlHint": {
+    "message": "Enter IP:port or full URL. (e.g.: http://example.com:9091/transmission)",
+    "description": "Server URL hint text"
+  },
+  "usernameLabel": {
+    "message": "Username (Optional)",
+    "description": "Username input label"
+  },
+  "usernamePlaceholder": {
+    "message": "Leave empty if not needed",
+    "description": "Username input placeholder"
+  },
+  "passwordLabel": {
+    "message": "Password (Optional)",
+    "description": "Password input label"
+  },
+  "passwordPlaceholder": {
+    "message": "Leave empty if not needed",
+    "description": "Password input placeholder"
+  },
+  "notificationSection": {
+    "message": "Notification Methods (Multiple selection allowed)",
+    "description": "Notification settings section title"
+  },
+  "notificationDescription": {
+    "message": "Choose how to display notifications when adding torrents. You can select multiple options.",
+    "description": "Notification settings description"
+  },
+  "notificationBadge": {
+    "message": "Badge - Show badge on extension icon (✓, ⚠, !)",
+    "description": "Badge notification option"
+  },
+  "notificationPopup": {
+    "message": "System Notification - Show popup in bottom-right corner",
+    "description": "System notification option"
+  },
+  "notificationConsole": {
+    "message": "Console Log - Output to developer console",
+    "description": "Console log option"
+  },
+  "inlineButtonSection": {
+    "message": "Inline Features",
+    "description": "Inline button settings section title"
+  },
+  "inlineButtonLabel": {
+    "message": "Show upload button next to magnet links",
+    "description": "Inline button checkbox label"
+  },
+  "inlineButtonHint": {
+    "message": "When enabled, small upload buttons will appear next to magnet links/hashes on web pages.",
+    "description": "Inline button hint"
+  },
+  "urlFilterSection": {
+    "message": "Active URLs (Optional)",
+    "description": "URL filter section title"
+  },
+  "urlFilterDescription": {
+    "message": "Right-click functionality will only work on these URLs. Leave empty to work on all sites.",
+    "description": "URL filter description"
+  },
+  "urlPlaceholder": {
+    "message": "e.g.: example.com",
+    "description": "URL input placeholder"
+  },
+  "addUrlButton": {
+    "message": "Add",
+    "description": "Add URL button text"
+  },
+  "saveSettings": {
+    "message": "Save Settings",
+    "description": "Save settings button text"
+  },
+  "settingsSaved": {
+    "message": "Settings saved successfully!",
+    "description": "Success message"
+  },
+  "settingsError": {
+    "message": "An error occurred.",
+    "description": "Error message"
+  },
+  "testConnection": {
+    "message": "Test Connection",
+    "description": "Test connection button text"
+  },
+
+  // Context menu
+  "contextMenuUpload": {
+    "message": "Upload to Transmission",
+    "description": "Context menu item for uploading"
+  },
+  "contextMenuUploadHash": {
+    "message": "Upload to Transmission (Hash)",
+    "description": "Context menu item for hash upload"
+  },
+
+  // Notifications
+  "notificationUploading": {
+    "message": "Uploading torrent...",
+    "description": "Notification when uploading starts"
+  },
+  "notificationTorrentAdded": {
+    "message": "New torrent added",
+    "description": "Notification when new torrent is added"
+  },
+  "notificationTorrentExists": {
+    "message": "Torrent already exists",
+    "description": "Notification when torrent already exists"
+  },
+  "notificationSuccess": {
+    "message": "Torrent added successfully",
+    "description": "Success notification"
+  },
+  "notificationError": {
+    "message": "Failed to add torrent",
+    "description": "Error notification"
+  },
+  "notificationExtensionDisabled": {
+    "message": "Extension is disabled on this site",
+    "description": "Notification when extension is disabled"
+  },
+  "notificationNoTorrentFound": {
+    "message": "No valid torrent information found",
+    "description": "Notification when no torrent found"
+  },
+  "notificationServerNotConfigured": {
+    "message": "Transmission server URL is not configured",
+    "description": "Notification when server not configured"
+  },
+  "notificationContentScriptError": {
+    "message": "Content Script error",
+    "description": "Content script error notification"
+  },
+  "notificationNoTextAtCursor": {
+    "message": "Cannot find text at cursor position",
+    "description": "Notification when no text at cursor"
+  },
+
+  // Error messages
+  "errorGeneric": {
+    "message": "Error",
+    "description": "Generic error prefix"
+  },
+  "errorInvalidFormat": {
+    "message": "Invalid torrent format",
+    "description": "Invalid format error"
+  },
+  "errorServerNotConfigured": {
+    "message": "Server URL not configured",
+    "description": "Server not configured error"
+  },
+
+  // Status messages
+  "statusConnected": {
+    "message": "Connected",
+    "description": "Connection status: connected"
+  },
+  "statusDisconnected": {
+    "message": "Disconnected",
+    "description": "Connection status: disconnected"
+  },
+  "statusError": {
+    "message": "Error",
+    "description": "Connection status: error"
+  }
+}

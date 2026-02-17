@@ -115,29 +115,29 @@
   </style>
 </head>
 <body>
-  <h1>Transmission URL Supporter</h1>
+  <h1 data-i18n="popupTitle">Transmission URL Supporter</h1>
 
   <div id="status" class="status disconnected">
     <div class="status-info">
-      <span class="status-label">서버 상태:</span>
-      <span class="status-value" id="serverStatus">확인 중...</span>
+      <span class="status-label" data-i18n="serverStatus">서버 상태:</span>
+      <span class="status-value" id="serverStatus" data-i18n="checking">확인 중...</span>
     </div>
     <div class="status-info">
-      <span class="status-label">서버 URL:</span>
+      <span class="status-label" data-i18n="serverUrl">서버 URL:</span>
       <span class="status-value" id="serverUrl" style="font-size: 11px; word-break: break-all;">-</span>
     </div>
   </div>
 
   <button id="checkBtn" class="btn-outline">
-    <span class="loading" id="checkLoading"><span class="spinner"></span>확인 중...</span>
-    <span id="checkText">서버 연결 확인</span>
+    <span class="loading" id="checkLoading"><span class="spinner"></span><span data-i18n="checkingConnection">확인 중...</span></span>
+    <span id="checkText" data-i18n="checkConnection">서버 연결 확인</span>
   </button>
 
   <div class="instructions">
-    <strong>사용 방법:</strong><br>
-    1. Transmission 서버 URL을 설정하세요<br>
-    2. 토렌트 링크 또는 해시 선택<br>
-    3. 우클릭 메뉴에서 "Transmission에 업로드" 선택
+    <strong data-i18n="instructions">사용 방법:</strong><br>
+    <span data-i18n="instruction1">1. Transmission 서버 URL을 설정하세요</span><br>
+    <span data-i18n="instruction2">2. 토렌트 링크 또는 해시 선택</span><br>
+    <span data-i18n="instruction3">3. 우클릭 메뉴에서 "Transmission에 업로드" 선택</span>
   </div>
 
   <script src="popup.js"></script>

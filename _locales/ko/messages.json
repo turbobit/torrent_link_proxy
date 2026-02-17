@@ -1,0 +1,230 @@
+{
+  "appName": {
+    "message": "Transmission URL Supporter",
+    "description": "Extension name"
+  },
+  "appDescription": {
+    "message": "우클릭하여 마그넷 링크나 토렌트 파일을 Transmission 서버에 업로드하세요",
+    "description": "Extension description"
+  },
+
+  // Popup UI
+  "popupTitle": {
+    "message": "Transmission URL Supporter",
+    "description": "Popup window title"
+  },
+  "serverStatus": {
+    "message": "서버 상태:",
+    "description": "Server status label"
+  },
+  "serverUrl": {
+    "message": "서버 URL:",
+    "description": "Server URL label"
+  },
+  "checking": {
+    "message": "확인 중...",
+    "description": "Status when checking connection"
+  },
+  "checkConnection": {
+    "message": "서버 연결 확인",
+    "description": "Check connection button text"
+  },
+  "checkingConnection": {
+    "message": "확인 중...",
+    "description": "Text when checking connection"
+  },
+  "instructions": {
+    "message": "사용 방법:",
+    "description": "Instructions section title"
+  },
+  "instruction1": {
+    "message": "1. Transmission 서버 URL을 설정하세요",
+    "description": "First instruction"
+  },
+  "instruction2": {
+    "message": "2. 토렌트 링크 또는 해시 선택",
+    "description": "Second instruction"
+  },
+  "instruction3": {
+    "message": "3. 우클릭 메뉴에서 \"Transmission에 업로드\" 선택",
+    "description": "Third instruction"
+  },
+
+  // Options page
+  "settingsTitle": {
+    "message": "Transmission URL Supporter 설정",
+    "description": "Options page title"
+  },
+  "serverUrlLabel": {
+    "message": "Transmission 서버 URL",
+    "description": "Server URL input label"
+  },
+  "serverUrlPlaceholder": {
+    "message": "예: http://example.com:9091/transmission",
+    "description": "Server URL input placeholder"
+  },
+  "serverUrlHint": {
+    "message": "IP:포트 또는 전체 URL을 입력하세요. (예: http://example.com:9091/transmission)",
+    "description": "Server URL hint text"
+  },
+  "usernameLabel": {
+    "message": "사용자 이름 (선택)",
+    "description": "Username input label"
+  },
+  "usernamePlaceholder": {
+    "message": "없으면 비워두세요",
+    "description": "Username input placeholder"
+  },
+  "passwordLabel": {
+    "message": "비밀번호 (선택)",
+    "description": "Password input label"
+  },
+  "passwordPlaceholder": {
+    "message": "없으면 비워두세요",
+    "description": "Password input placeholder"
+  },
+  "notificationSection": {
+    "message": "알림 방식 (중복 선택 가능)",
+    "description": "Notification settings section title"
+  },
+  "notificationDescription": {
+    "message": "토렌트 추가 시 표시 방식을 선택하세요. 여러 개를 함께 사용할 수 있습니다.",
+    "description": "Notification settings description"
+  },
+  "notificationBadge": {
+    "message": "배지 - 확장 아이콘에 배지 표시 (✓, ⚠, !)",
+    "description": "Badge notification option"
+  },
+  "notificationPopup": {
+    "message": "시스템 알림 - 화면 우측 하단에 알림 표시",
+    "description": "System notification option"
+  },
+  "notificationConsole": {
+    "message": "콘솔 로그 - 개발자 도구 콘솔에 로그 출력",
+    "description": "Console log option"
+  },
+  "inlineButtonSection": {
+    "message": "페이지 내 기능",
+    "description": "Inline button settings section title"
+  },
+  "inlineButtonLabel": {
+    "message": "magnet 링크 옆에 업로드 버튼 표시",
+    "description": "Inline button checkbox label"
+  },
+  "inlineButtonHint": {
+    "message": "활성화하면 페이지의 magnet 링크/해시값 옆에 작은 업로드 버튼이 나타납니다.",
+    "description": "Inline button hint"
+  },
+  "urlFilterSection": {
+    "message": "동작 URL (선택사항)",
+    "description": "URL filter section title"
+  },
+  "urlFilterDescription": {
+    "message": "이 URL들에서만 우클릭 기능이 작동합니다. 비워두면 모든 사이트에서 작동합니다.",
+    "description": "URL filter description"
+  },
+  "urlPlaceholder": {
+    "message": "예: example.com",
+    "description": "URL input placeholder"
+  },
+  "addUrlButton": {
+    "message": "추가",
+    "description": "Add URL button text"
+  },
+  "saveSettings": {
+    "message": "설정 저장",
+    "description": "Save settings button text"
+  },
+  "settingsSaved": {
+    "message": "설정이 저장되었습니다!",
+    "description": "Success message"
+  },
+  "settingsError": {
+    "message": "오류가 발생했습니다.",
+    "description": "Error message"
+  },
+  "testConnection": {
+    "message": "연결 테스트",
+    "description": "Test connection button text"
+  },
+
+  // Context menu
+  "contextMenuUpload": {
+    "message": "Transmission에 업로드",
+    "description": "Context menu item for uploading"
+  },
+  "contextMenuUploadHash": {
+    "message": "Transmission에 업로드 (해시값)",
+    "description": "Context menu item for hash upload"
+  },
+
+  // Notifications
+  "notificationUploading": {
+    "message": "토렌트 업로드 중...",
+    "description": "Notification when uploading starts"
+  },
+  "notificationTorrentAdded": {
+    "message": "새로운 토렌트 추가됨",
+    "description": "Notification when new torrent is added"
+  },
+  "notificationTorrentExists": {
+    "message": "이미 올라간 토렌트입니다",
+    "description": "Notification when torrent already exists"
+  },
+  "notificationSuccess": {
+    "message": "토렌트가 성공적으로 추가되었습니다",
+    "description": "Success notification"
+  },
+  "notificationError": {
+    "message": "토렌트 추가 실패",
+    "description": "Error notification"
+  },
+  "notificationExtensionDisabled": {
+    "message": "이 사이트에서는 확장 기능이 비활성화되어 있습니다",
+    "description": "Notification when extension is disabled"
+  },
+  "notificationNoTorrentFound": {
+    "message": "유효한 토렌트 정보를 찾을 수 없습니다",
+    "description": "Notification when no torrent found"
+  },
+  "notificationServerNotConfigured": {
+    "message": "Transmission 서버 URL이 설정되지 않았습니다",
+    "description": "Notification when server not configured"
+  },
+  "notificationContentScriptError": {
+    "message": "Content Script 오류",
+    "description": "Content script error notification"
+  },
+  "notificationNoTextAtCursor": {
+    "message": "커서 위치에서 텍스트를 찾을 수 없습니다",
+    "description": "Notification when no text at cursor"
+  },
+
+  // Error messages
+  "errorGeneric": {
+    "message": "오류",
+    "description": "Generic error prefix"
+  },
+  "errorInvalidFormat": {
+    "message": "유효하지 않은 토렌트 형식",
+    "description": "Invalid format error"
+  },
+  "errorServerNotConfigured": {
+    "message": "서버 URL이 설정되지 않음",
+    "description": "Server not configured error"
+  },
+
+  // Status messages
+  "statusConnected": {
+    "message": "연결됨",
+    "description": "Connection status: connected"
+  },
+  "statusDisconnected": {
+    "message": "연결 끊어짐",
+    "description": "Connection status: disconnected"
+  },
+  "statusError": {
+    "message": "오류",
+    "description": "Connection status: error"
+  }
+}

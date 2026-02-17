@@ -283,7 +283,7 @@ function createContextMenus() {
   // 링크에 대한 메뉴 ( magnet 링크 포함 )
   chrome.contextMenus.create({
     id: 'upload Torrent',
-    title: 'Transmission에 업로드',
+    title: chrome.i18n.getMessage('contextMenuUpload'),
     contexts: ['link'],
     targetUrlPatterns: [
       'magnet:*',
@@ -294,7 +294,7 @@ function createContextMenus() {
   // 텍스트 선택 시 또는 페이지 우클릭 시 ( info hash 직접 입력 가능 )
   chrome.contextMenus.create({
     id: 'upload With Hash',
-    title: 'Transmission에 업로드 (해시값)',
+    title: chrome.i18n.getMessage('contextMenuUploadHash'),
     contexts: ['selection', 'page']
   });
 }
@@ -483,7 +483,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // URL allowlist 확인
   if (!isUrlAllowed(tab.url, settings.allowedUrls)) {
     console.log('URL not allowed:', tab.url, 'allowedUrls:', settings.allowedUrls);
-    showResultNotification('error', '이 사이트에서는 확장 기능이 비활성화되어 있습니다');
+    showResultNotification('error', chrome.i18n.getMessage('notificationExtensionDisabled'));
     return;
   }
 
@@ -503,8 +503,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           } else if (result.success) {
             // 성공 알림 (새로 추가됨 또는 중복)
             const message = result.type === 'added'
-              ? '새로운 토렌트 추가됨'
-              : '이미 올라간 토렌트입니다';
+              ? chrome.i18n.getMessage('notificationTorrentAdded')
+              : chrome.i18n.getMessage('notificationTorrentExists');
             console.log(`Success (${result.type}): Magnet link`, {
               message: message,
               torrentId: result.torrentId,
@@ -572,8 +572,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           } else if (result.success) {
             // 성공 알림 (새로 추가됨 또는 중복)
             const message = result.type === 'added'
-              ? '새로운 토렌트 추가됨'
-              : '이미 올라간 토렌트입니다';
+              ? chrome.i18n.getMessage('notificationTorrentAdded')
+              : chrome.i18n.getMessage('notificationTorrentExists');
             console.log(`Success (${result.type}): Hash/Magnet added to Transmission`, {
               message: message,
               torrentId: result.torrentId,
@@ -600,7 +600,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             selectedText: selectedText,
             tokens: tokens
           });
-          showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
+          showResultNotification('error', chrome.i18n.getMessage('notificationNoTorrentFound'));
         }
       } else {
         // ===== 선택 영역이 없는 경우: Content Script에서 클릭 위치의 단어 추출 =====
@@ -608,7 +608,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         chrome.tabs.sendMessage(tab.id, { action: 'getWordAtCursor' }, (response) => {
           if (chrome.runtime.lastError) {
             console.error('Content script error:', chrome.runtime.lastError);
-            showResultNotification('error', 'Content Script 오류');
+            showResultNotification('error', chrome.i18n.getMessage('notificationContentScriptError'));
             return;
           }
 
@@ -617,7 +617,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
           if (!word) {
             console.error('No word found at cursor position');
-            showResultNotification('error', '커서 위치에서 텍스트를 찾을 수 없습니다');
+            showResultNotification('error', chrome.i18n.getMessage('notificationNoTextAtCursor'));
             return;
           }
 
@@ -658,7 +658,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
               word: word,
               torrentInfo: torrentInfo
             });
-            showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
+            showResultNotification('error', chrome.i18n.getMessage('notificationNoTorrentFound'));
           }
         });
       }
@@ -724,7 +724,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 서버 URL 확인
         if (!settings.serverUrl) {
           console.error(`[Inline Button] ❌ 서버 URL이 설정되지 않음`);
-          showResultNotification('error', 'Transmission 서버 URL이 설정되지 않았습니다');
+          showResultNotification('error', chrome.i18n.getMessage('notificationServerNotConfigured'));
           sendResponse({ success: false, error: 'Server URL not configured' });
           return;
         }
@@ -736,7 +736,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const torrentInfo = parseTorrentFromText(request.torrent);
         if (!torrentInfo) {
           console.error(`[Inline Button] ❌ 유효한 토렌트 정보 없음: ${request.torrent}`);
-          showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
+          showResultNotification('error', chrome.i18n.getMessage('notificationNoTorrentFound'));
           sendResponse({ success: false, error: 'Invalid torrent format' });
           return;
         }
@@ -748,7 +748,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // 업로드 시작
         console.log(`[Inline Button] ⏳ 업로드 시작...`);
-        showResultNotification('processing', '토렌트 업로드 중...', { torrent: request.torrent });
+        showResultNotification('processing', chrome.i18n.getMessage('notificationUploading'), { torrent: request.torrent });
 
         const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password);
 

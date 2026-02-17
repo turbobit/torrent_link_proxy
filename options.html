@@ -84,74 +84,74 @@
   </style>
 </head>
 <body>
-  <h1>Transmission URL Supporter 설정</h1>
+  <h1 data-i18n="settingsTitle">Transmission URL Supporter 설정</h1>
 
   <div class="form-group">
-    <label for="serverUrl">Transmission 서버 URL</label>
-    <input type="text" id="serverUrl" placeholder="예: http://example.com:9091/transmission">
-    <div class="hint">IP:포트 또는 전체 URL을 입력하세요. (예: http://example.com:9091/transmission)</div>
+    <label for="serverUrl" data-i18n="serverUrlLabel">Transmission 서버 URL</label>
+    <input type="text" id="serverUrl" data-i18n-placeholder="serverUrlPlaceholder" placeholder="예: http://example.com:9091/transmission">
+    <div class="hint" data-i18n="serverUrlHint">IP:포트 또는 전체 URL을 입력하세요. (예: http://example.com:9091/transmission)</div>
   </div>
 
   <div class="form-group">
-    <label for="username">사용자 이름 (선택)</label>
-    <input type="text" id="username" placeholder="없으면 비워두세요">
+    <label for="username" data-i18n="usernameLabel">사용자 이름 (선택)</label>
+    <input type="text" id="username" data-i18n-placeholder="usernamePlaceholder" placeholder="없으면 비워두세요">
   </div>
 
   <div class="form-group">
-    <label for="password">비밀번호 (선택)</label>
-    <input type="password" id="password" placeholder="없으면 비워두세요">
+    <label for="password" data-i18n="passwordLabel">비밀번호 (선택)</label>
+    <input type="password" id="password" data-i18n-placeholder="passwordPlaceholder" placeholder="없으면 비워두세요">
   </div>
 
   <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
 
-  <h2 style="color: #333; margin-top: 30px;">알림 방식 (중복 선택 가능)</h2>
+  <h2 style="color: #333; margin-top: 30px;" data-i18n="notificationSection">알림 방식 (중복 선택 가능)</h2>
   <div class="form-group">
-    <label>토렌트 추가 시 표시 방식을 선택하세요. 여러 개를 함께 사용할 수 있습니다.</label>
+    <label data-i18n="notificationDescription">토렌트 추가 시 표시 방식을 선택하세요. 여러 개를 함께 사용할 수 있습니다.</label>
     <div style="margin-top: 10px;">
       <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
         <input type="checkbox" name="notificationStyle" value="badge" style="margin-right: 10px;">
-        <span><strong>1. 배지</strong> - 확장 아이콘에 배지 표시 (✓, ⚠, !)</span>
+        <span data-i18n="notificationBadge"><strong>1. 배지</strong> - 확장 아이콘에 배지 표시 (✓, ⚠, !)</span>
       </label>
       <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
         <input type="checkbox" name="notificationStyle" value="notification" style="margin-right: 10px;">
-        <span><strong>2. 시스템 알림</strong> - 화면 우측 하단에 알림 표시</span>
+        <span data-i18n="notificationPopup"><strong>2. 시스템 알림</strong> - 화면 우측 하단에 알림 표시</span>
       </label>
       <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
         <input type="checkbox" name="notificationStyle" value="console" style="margin-right: 10px;">
-        <span><strong>3. 콘솔 로그</strong> - 개발자 도구 콘솔에 로그 출력</span>
+        <span data-i18n="notificationConsole"><strong>3. 콘솔 로그</strong> - 개발자 도구 콘솔에 로그 출력</span>
       </label>
     </div>
   </div>
 
   <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
 
-  <h2 style="color: #333; margin-top: 30px;">페이지 내 기능</h2>
+  <h2 style="color: #333; margin-top: 30px;" data-i18n="inlineButtonSection">페이지 내 기능</h2>
   <div class="form-group">
     <label style="display: flex; align-items: center; font-weight: normal;">
       <input type="checkbox" id="inlineButton" style="margin-right: 10px;">
-      <span>magnet 링크 옆에 <strong>업로드 버튼</strong> 표시</span>
+      <span data-i18n="inlineButtonLabel">magnet 링크 옆에 <strong>업로드 버튼</strong> 표시</span>
     </label>
-    <div class="hint">활성화하면 페이지의 magnet 링크/해시값 옆에 작은 업로드 버튼이 나타납니다.</div>
+    <div class="hint" data-i18n="inlineButtonHint">활성화하면 페이지의 magnet 링크/해시값 옆에 작은 업로드 버튼이 나타납니다.</div>
   </div>
 
   <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
 
-  <h2 style="color: #333; margin-top: 30px;">동작 URL (선택사항)</h2>
+  <h2 style="color: #333; margin-top: 30px;" data-i18n="urlFilterSection">동작 URL (선택사항)</h2>
   <div class="form-group">
-    <label>이 URL들에서만 우클릭 기능이 작동합니다. 비워두면 모든 사이트에서 작동합니다.</label>
+    <label data-i18n="urlFilterDescription">이 URL들에서만 우클릭 기능이 작동합니다. 비워두면 모든 사이트에서 작동합니다.</label>
     <div id="urlList" style="margin-top: 10px; margin-bottom: 15px;"></div>
     <div style="display: flex; gap: 10px;">
-      <input type="text" id="newUrl" placeholder="예: example.com" style="flex: 1;">
-      <button id="addUrlBtn" style="padding: 10px 15px;">추가</button>
+      <input type="text" id="newUrl" data-i18n-placeholder="urlPlaceholder" placeholder="예: example.com" style="flex: 1;">
+      <button id="addUrlBtn" data-i18n="addUrlButton" style="padding: 10px 15px;">추가</button>
     </div>
   </div>
 
-  <button id="saveBtn" style="margin-top: 20px;">설정 저장</button>
-  <div id="successMsg" class="success">설정이 저장되었습니다!</div>
-  <div id="errorMsg" class="error">오류가 발생했습니다.</div>
+  <button id="saveBtn" data-i18n="saveSettings" style="margin-top: 20px;">설정 저장</button>
+  <div id="successMsg" class="success" data-i18n="settingsSaved">설정이 저장되었습니다!</div>
+  <div id="errorMsg" class="error" data-i18n="settingsError">오류가 발생했습니다.</div>
 
   <div class="form-group">
-    <button id="testBtn">연결 테스트</button>
+    <button id="testBtn" data-i18n="testConnection">연결 테스트</button>
     <div id="testResult" class="test-result"></div>
   </div>
 

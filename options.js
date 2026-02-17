@@ -1,3 +1,25 @@
+// i18n 메시지 로드 유틸리티 함수
+function loadI18nMessages() {
+  const elements = document.querySelectorAll('[data-i18n]');
+  elements.forEach(element => {
+    const messageKey = element.getAttribute('data-i18n');
+    const message = chrome.i18n.getMessage(messageKey);
+    if (message) {
+      element.textContent = message;
+    }
+  });
+
+  // placeholder 속성 처리
+  const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
+  placeholderElements.forEach(element => {
+    const messageKey = element.getAttribute('data-i18n-placeholder');
+    const message = chrome.i18n.getMessage(messageKey);
+    if (message) {
+      element.placeholder = message;
+    }
+  });
+}
+
 // 설정 로드
 function getSettings() {
   return new Promise((resolve) => {
@@ -155,6 +177,9 @@ async function testConnection(serverUrl, username, password) {
 
 // DOM이 로드된 후 초기화
 document.addEventListener('DOMContentLoaded', () => {
+  // i18n 메시지 로드
+  loadI18nMessages();
+
   const serverUrlInput = document.getElementById('serverUrl');
   const usernameInput = document.getElementById('username');
   const passwordInput = document.getElementById('password');

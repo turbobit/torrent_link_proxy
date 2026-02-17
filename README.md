@@ -41,10 +41,50 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 1. 토렌트 파일을 브라우저 창으로 드래그
 2. 자동으로 Transmission에 업로드
 
+## 다국어 지원 (i18n)
+
+이 확장 프로그램은 Chrome 확장 프로그램의 표준 i18n 시스템을 사용하여 다국어를 지원합니다.
+
+### 지원 언어
+- **English (en)**: 기본 언어
+- **한국어 (ko)**: 한국어 지원
+
+### 언어 추가 방법
+새로운 언어를 추가하려면 다음 단계를 따르세요:
+
+1. **로케일 폴더 생성**
+   ```bash
+   mkdir -p _locales/{language_code}
+   ```
+
+2. **메시지 파일 생성**
+   `_locales/{language_code}/messages.json` 파일을 생성하고 영어 버전을 번역하세요.
+
+3. **Pull Request 제출**
+   새로운 언어 파일을 포함한 Pull Request를 제출하세요.
+
+### 메시지 키 구조
+- `appName`: 확장 프로그램 이름
+- `appDescription`: 확장 프로그램 설명
+- `popup*`: 팝업 UI 관련 메시지
+- `settings*`: 설정 페이지 관련 메시지
+- `notification*`: 알림 메시지
+- `contextMenu*`: 우클릭 메뉴 텍스트
+- `status*`: 상태 표시 텍스트
+
+### 개발자 참고사항
+- 기본 언어는 영어(`en`)입니다
+- 새로운 메시지를 추가할 때는 영어와 한국어 버전을 모두 업데이트하세요
+- HTML에서는 `data-i18n` 속성을 사용하세요
+- JavaScript에서는 `chrome.i18n.getMessage()`를 사용하세요
+
 ## 개발 정보
 
 ### 파일 구조
 ```
+├── _locales/             # 다국어 메시지 파일들
+│   ├── en/messages.json  # 영어 메시지
+│   └── ko/messages.json  # 한국어 메시지
 ├── manifest.json          # 확장 프로그램 매니페스트
 ├── background.js          # 백그라운드 서비스 워커
 ├── content.js             # 컨텐츠 스크립트
