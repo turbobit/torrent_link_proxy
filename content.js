@@ -145,6 +145,7 @@ function processTextNodeForInlineButtons(textNode) {
 
   // Fragment 생성해서 부분별로 추가
   const fragment = document.createDocumentFragment();
+  let lastIndex = 0; // 텍스트 위치 추적
 
   filteredMatches.forEach(m => {
     // 이전 텍스트 추가
