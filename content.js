@@ -99,6 +99,151 @@ const REGEX_PATTERNS = {
 };
 
 /**
+ * input/textarea/pre 요소에서 torrent 링크를 찾아 옆에 버튼 추가
+ */
+function processInputElementForInlineButtons(element) {
+  let text = '';
+
+  // 요소 타입에 따라 텍스트 추출
+  if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+    text = element.value || element.textContent || '';
+  } else if (element.tagName === 'PRE') {
+    text = element.textContent || '';
+  } else {
+    return; // 지원하지 않는 요소
+  }
+
+  if (!text || text.length < 32) return; // 너무 짧은 텍스트는 무시
+
+  // 이미 처리되었는지 확인 (중복 처리 방지)
+  if (element.dataset?.torrentButtonsProcessed === 'true') {
+    return;
+  }
+
+  // 빠른 필터링: 키워드 포함 확인
+  if (!text.includes('magnet') && !/[a-fA-F0-9]{40}/.test(text) && !/[a-zA-Z2-7]{32}/.test(text)) {
+    return;
+  }
+
+  console.log('[Torrent Proxy] 📝 Input 요소 처리:', element.tagName, '텍스트 길이:', text.length);
+
+  // 모든 매칭을 수집
+  const matches = [];
+
+  // magnet 링크 찾기
+  REGEX_PATTERNS.magnet.lastIndex = 0;
+  let match;
+  while ((match = REGEX_PATTERNS.magnet.exec(text)) !== null) {
+    matches.push({ start: match.index, end: match.index + match[0].length, text: match[0], type: 'magnet' });
+  }
+
+  // 40자 hex 해시 찾기
+  REGEX_PATTERNS.hexHash.lastIndex = 0;
+  while ((match = REGEX_PATTERNS.hexHash.exec(text)) !== null) {
+    matches.push({ start: match.index, end: match.index + match[0].length, text: match[0], type: 'hash' });
+  }
+
+  // 32자 base32 해시 찾기
+  REGEX_PATTERNS.base32Hash.lastIndex = 0;
+  while ((match = REGEX_PATTERNS.base32Hash.exec(text)) !== null) {
+    matches.push({ start: match.index, end: match.index + match[0].length, text: match[0], type: 'hash' });
+  }
+
+  if (matches.length === 0) return;
+
+  // 오버래핑 매칭 제거
+  matches.sort((a, b) => a.start - b.start);
+  const filteredMatches = [];
+  matches.forEach(m => {
+    if (filteredMatches.length === 0 || m.start >= filteredMatches[filteredMatches.length - 1].end) {
+      filteredMatches.push(m);
+    }
+  });
+
+  // input/textarea 요소에 버튼 추가 (요소 옆에 배치)
+  if (filteredMatches.length > 0) {
+    // 요소의 부모 컨테이너 찾기
+    const container = element.parentNode;
+    if (!container) return;
+
+    // 이미 버튼이 있는지 확인
+    const existingButton = container.querySelector('.torrent-upload-inline-btn');
+    if (existingButton) return;
+
+    console.log('[Torrent Proxy] 🎯 Input 요소에 버튼 추가:', filteredMatches.length, '개 매칭');
+
+    // 첫 번째 매칭에 대해서만 버튼 추가 (간단하게)
+    const firstMatch = filteredMatches[0];
+
+    // 버튼 생성
+    const button = document.createElement('button');
+    button.textContent = '⬆';
+    button.className = 'torrent-upload-inline-btn';
+    button.title = '업로드';
+    button.style.cssText = 'margin-left: 8px; padding: 4px 8px; font-size: 14px; background-color: #4a90d9; color: white; border: none; border-radius: 3px; cursor: pointer; vertical-align: middle; transition: background-color 0.2s;';
+    button.type = 'button';
+
+    // 버튼 클릭 핸들러
+    button.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[Torrent Proxy] 🔘 Input 버튼 클릭됨');
+      console.log('[Torrent Proxy] 📦 대상:', firstMatch.text);
+      console.log('[Torrent Proxy] 🔗 타입:', firstMatch.type);
+
+      // 버튼 disabled 상태로 변경해서 중복 클릭 방지
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = '⟳';
+      button.style.backgroundColor = '#666';
+
+      try {
+        chrome.runtime.sendMessage({
+          action: 'uploadFromInline',
+          torrent: firstMatch.text,
+          type: firstMatch.type
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('[Torrent Proxy] ❌ Context Error:', chrome.runtime.lastError.message);
+            button.disabled = false;
+            button.textContent = '❌';
+            button.style.backgroundColor = '#dc3545';
+            return;
+          }
+          console.log('[Torrent Proxy] ✅ 응답 받음:', response);
+
+          // 버튼 상태 복원
+          setTimeout(() => {
+            button.disabled = false;
+            button.textContent = originalText;
+            button.style.backgroundColor = '#4a90d9';
+          }, 2000);
+        });
+      } catch (error) {
+        console.error('[Torrent Proxy] ❌ 메시지 전송 오류:', error.message);
+        button.disabled = false;
+        button.textContent = '❌';
+        button.style.backgroundColor = '#dc3545';
+      }
+    };
+
+    // 호버 효과
+    button.onmouseover = () => {
+      if (!button.disabled) button.style.backgroundColor = '#357abd';
+    };
+    button.onmouseout = () => {
+      if (!button.disabled) button.style.backgroundColor = '#4a90d9';
+    };
+
+    // 요소 옆에 버튼 추가
+    container.appendChild(button);
+
+    // 처리 완료 표시
+    element.dataset.torrentButtonsProcessed = 'true';
+  }
+}
+
+/**
  * 텍스트 노드에서 torrent 링크를 찾아 옆에 버튼 추가
  */
 function processTextNodeForInlineButtons(textNode) {
@@ -358,6 +503,16 @@ function initializeInlineButtons() {
         }
       });
 
+      // Input 요소들 (textarea, input[type="text"], pre) 처리
+      const inputElements = document.querySelectorAll('textarea, input[type="text"], input[type="url"], pre');
+      inputElements.forEach(inputEl => {
+        if (!processedNodes.has(inputEl)) {
+          processedNodes.add(inputEl);
+          processInputElementForInlineButtons(inputEl);
+          processedCount++;
+        }
+      });
+
       console.log(`[Torrent Proxy] ✅ ${processedCount}개 노드 처리 완료`);
     }
 
@@ -390,32 +545,40 @@ function initializeInlineButtons() {
                   if (node.dataset?.torrentButtonsProcessed === 'true') return;
 
                   processedNodes.add(node);
-                  const walker = document.createTreeWalker(
-                    node,
-                    NodeFilter.SHOW_TEXT,
-                    null,
-                    false
-                  );
-                  let textNode;
-                  while (textNode = walker.nextNode()) {
-                    // Ancestor 중 이미 처리된 element가 있는지 확인
-                    let isProcessed = false;
-                    let parent = textNode.parentNode;
-                    while (parent) {
-                      if (parent.dataset?.torrentButtonsProcessed === 'true') {
-                        isProcessed = true;
-                        break;
-                      }
-                      parent = parent.parentNode;
-                    }
-                    if (isProcessed) {
-                      continue;
-                    }
 
-                    if (!processedNodes.has(textNode)) {
-                      processedNodes.add(textNode);
-                      processTextNodeForInlineButtons(textNode);
-                      newNodesCount++;
+                  // Input 요소인 경우 별도 처리
+                  if (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'PRE') {
+                    processInputElementForInlineButtons(node);
+                    newNodesCount++;
+                  } else {
+                    // 일반 요소의 텍스트 노드 처리
+                    const walker = document.createTreeWalker(
+                      node,
+                      NodeFilter.SHOW_TEXT,
+                      null,
+                      false
+                    );
+                    let textNode;
+                    while (textNode = walker.nextNode()) {
+                      // Ancestor 중 이미 처리된 element가 있는지 확인
+                      let isProcessed = false;
+                      let parent = textNode.parentNode;
+                      while (parent) {
+                        if (parent.dataset?.torrentButtonsProcessed === 'true') {
+                          isProcessed = true;
+                          break;
+                        }
+                        parent = parent.parentNode;
+                      }
+                      if (isProcessed) {
+                        continue;
+                      }
+
+                      if (!processedNodes.has(textNode)) {
+                        processedNodes.add(textNode);
+                        processTextNodeForInlineButtons(textNode);
+                        newNodesCount++;
+                      }
                     }
                   }
                 }
