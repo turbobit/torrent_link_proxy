@@ -24,16 +24,24 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Create ZIP package
+      - name: Create release assets
         run: |
+          # ZIP 파일 생성 (릴리즈용)
           zip -r torrent-link-proxy-v${{ github.event.repository.updated_at || github.run_number }}.zip \
             manifest.json background.js content.js popup.html popup.js \
             options.html options.js icon16.svg icon48.svg icon128.svg
 
+          # GitHub Pages용 디렉토리 생성
+          mkdir -p pages-assets
+          cp index.html pages-assets/
+          cp README.md pages-assets/
+          cp icon*.svg pages-assets/
+          cp torrent-link-proxy-v${{ github.event.repository.updated_at || github.run_number }}.zip pages-assets/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: pages-assets
 
   deploy:
     environment:
