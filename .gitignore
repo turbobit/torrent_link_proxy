@@ -1,0 +1,33 @@
+# 빌드 결과물
+*.zip
+*.tar.gz
+dist/
+build/
+
+# Node.js (만약 사용한다면)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 로그 파일
+*.log
+
+# 임시 파일
+*.tmp
+*.temp
+
+# Chrome 확장 개발용
+# (필요시 주석 해제)
+# manifest.json.backup
+# *.crx
