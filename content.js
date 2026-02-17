@@ -256,6 +256,11 @@ function processTextNodeForInlineButtons(textNode) {
     return;
   }
 
+  // Form control (textarea, input) 내부의 text node는 처리하지 않음
+  if (parent?.tagName === 'TEXTAREA' || parent?.tagName === 'INPUT') {
+    return;
+  }
+
   // 빠른 필터링: 키워드 포함 확인
   if (!text.includes('magnet') && !/[a-fA-F0-9]{40}/.test(text) && !/[a-zA-Z2-7]{32}/.test(text)) {
     return;
