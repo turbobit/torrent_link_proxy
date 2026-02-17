@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Transmission URL Supporter",
+  "version": "1.0.0",
+  "description": "Right-click to upload magnet links or torrent files to Transmission server",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Transmission URL Supporter"
+  },
+  "icons": {
+    "16": "icon16.svg",
+    "48": "icon48.svg",
+    "128": "icon128.svg"
+  }
+}
