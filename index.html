@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transmission URL Supporter - Chrome Extension</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .logo {
+            width: 128px;
+            height: 128px;
+            margin-bottom: 20px;
+        }
+        .download-section {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .download-btn {
+            background: #4285f4;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px;
+        }
+        .download-btn:hover {
+            background: #3367d6;
+        }
+        .features {
+            margin: 30px 0;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .feature-list li:before {
+            content: "✓";
+            color: #4CAF50;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .instructions {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="icon128.svg" alt="Transmission URL Supporter Logo" class="logo">
+        <h1>Transmission URL Supporter</h1>
+        <p>마그넷 링크와 토렌트 파일을 Transmission 서버에 쉽게 업로드하세요</p>
+        <p class="version">버전 1.0.0</p>
+    </div>
+
+    <div class="download-section">
+        <h2>다운로드</h2>
+        <p>Chrome 확장 프로그램을 설치하려면 아래 링크를 클릭하세요:</p>
+        <a href="torrent-link-proxy-v1.0.0.zip" class="download-btn">ZIP 파일 다운로드</a>
+        <p><small>크롬 확장 프로그램 개발자 모드에서 설치 가능</small></p>
+    </div>
+
+    <div class="features">
+        <h2>주요 기능</h2>
+        <ul class="feature-list">
+            <li>마그넷 링크 우클릭으로 Transmission 서버에 직접 업로드</li>
+            <li>토렌트 파일 드래그 앤 드롭 지원</li>
+            <li>Transmission 서버 설정 저장</li>
+            <li>업로드 상태 알림</li>
+            <li>간편한 옵션 페이지로 서버 설정</li>
+        </ul>
+    </div>
+
+    <div class="instructions">
+        <h2>설치 방법</h2>
+        <ol>
+            <li>위의 "ZIP 파일 다운로드" 버튼을 클릭하여 확장 프로그램을 다운로드하세요.</li>
+            <li>Chrome 브라우저에서 <code class="code">chrome://extensions/</code>로 이동하세요.</li>
+            <li>우측 상단의 "개발자 모드"를 활성화하세요.</li>
+            <li>다운로드한 ZIP 파일을 압축 해제하세요.</li>
+            <li>"압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고 압축 해제한 폴더를 선택하세요.</li>
+            <li>확장 프로그램이 설치됩니다.</li>
+        </ol>
+    </div>
+
+    <div class="instructions">
+        <h2>사용 방법</h2>
+        <ol>
+            <li>확장 프로그램 아이콘을 클릭하여 옵션 페이지를 열어 Transmission 서버 정보를 설정하세요.</li>
+            <li>마그넷 링크를 우클릭하고 "Transmission에 업로드"를 선택하세요.</li>
+            <li>토렌트 파일을 브라우저에 드래그하여 업로드하세요.</li>
+        </ol>
+    </div>
+
+    <div class="features">
+        <h2>기술 정보</h2>
+        <ul>
+            <li><strong>Manifest 버전:</strong> 3</li>
+            <li><strong>권한:</strong> contextMenus, storage, activeTab, notifications</li>
+            <li><strong>호스트 권한:</strong> 모든 URL</li>
+            <li><strong>배경:</strong> Service Worker (background.js)</li>
+        </ul>
+    </div>
+
+    <footer style="text-align: center; margin-top: 50px; color: #666;">
+        <p>&copy; 2024 Transmission URL Supporter. MIT 라이선스</p>
+    </footer>
+</body>
+</html>
