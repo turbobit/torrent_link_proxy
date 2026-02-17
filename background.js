@@ -686,6 +686,12 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 // 팝업에서 설정 업데이트 요청이 오면 메뉴 재생성
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'ping') {
+    // Service Worker 깨우기용 ping 응답
+    sendResponse({ status: 'pong' });
+    return;
+  }
+
   if (request.action === 'updateMenu') {
     createContextMenus();
     sendResponse({ status: 'ok' });

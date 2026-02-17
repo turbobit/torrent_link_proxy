@@ -181,34 +181,96 @@ function processTextNodeForInlineButtons(textNode) {
       button.textContent = '⟳';
       button.style.backgroundColor = '#666';
 
-      try {
-        chrome.runtime.sendMessage({
-          action: 'uploadFromInline',
-          torrent: m.text,
-          type: m.type
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Torrent Proxy] ❌ Context Error:', chrome.runtime.lastError.message);
-            button.disabled = false;
-            button.textContent = '❌';
-            button.style.backgroundColor = '#dc3545';
-            return;
+      // Service Worker 깨우기 함수
+      const wakeServiceWorker = () => {
+        return new Promise((resolve) => {
+          try {
+            // 간단한 ping 메시지로 Service Worker 깨우기
+            chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
+              if (chrome.runtime.lastError) {
+                console.log('[Torrent Proxy] 🔄 Service Worker 깨우는 중...');
+                resolve(false);
+              } else {
+                console.log('[Torrent Proxy] ✅ Service Worker 응답 받음');
+                resolve(true);
+              }
+            });
+          } catch (e) {
+            console.log('[Torrent Proxy] 🔄 Service Worker 깨우기 시도 중...');
+            resolve(false);
           }
-          console.log('[Torrent Proxy] ✅ 응답 받음:', response);
 
-          // 버튼 상태 복원
-          setTimeout(() => {
-            button.disabled = false;
-            button.textContent = originalText;
-            button.style.backgroundColor = '#4a90d9';
-          }, 2000);
+          // 타임아웃 설정 (Service Worker가 응답하지 않아도 계속 진행)
+          setTimeout(() => resolve(false), 200);
         });
-      } catch (error) {
-        console.error('[Torrent Proxy] ❌ 메시지 전송 오류:', error.message);
-        button.disabled = false;
-        button.textContent = '❌';
-        button.style.backgroundColor = '#dc3545';
-      }
+      };
+
+      // 메시지 전송 함수 (재시도 로직 포함)
+      const sendMessageWithRetry = async (retryCount = 0) => {
+        try {
+          chrome.runtime.sendMessage({
+            action: 'uploadFromInline',
+            torrent: m.text,
+            type: m.type
+          }, (response) => {
+            // Service Worker 컨텍스트 에러 처리
+            if (chrome.runtime.lastError) {
+              const errorMessage = chrome.runtime.lastError.message;
+              console.error('[Torrent Proxy] ❌ 런타임 에러:', errorMessage);
+
+              // Extension context invalidated 에러인 경우 재시도
+              if (errorMessage.includes('Extension context invalidated') && retryCount < 2) {
+                console.log('[Torrent Proxy] 🔄 Service Worker 재시작 대기 후 재시도...');
+                button.textContent = '⟲';
+
+                setTimeout(() => {
+                  sendMessageWithRetry(retryCount + 1);
+                }, 1000); // 1초 대기 후 재시도
+                return;
+              }
+
+              // 다른 에러들은 실패로 처리
+              button.disabled = false;
+              button.textContent = '❌';
+              button.style.backgroundColor = '#dc3545';
+              button.title = '업로드 실패: ' + errorMessage;
+              return;
+            }
+
+            // 성공 응답 처리
+            console.log('[Torrent Proxy] ✅ 응답 받음:', response);
+
+            if (response && response.success) {
+              button.textContent = '✅';
+              button.style.backgroundColor = '#28a745';
+              button.title = '업로드 성공';
+            } else {
+              button.textContent = '❌';
+              button.style.backgroundColor = '#dc3545';
+              button.title = response?.error || '업로드 실패';
+            }
+
+            // 버튼 상태 복원
+            setTimeout(() => {
+              button.disabled = false;
+              button.textContent = originalText;
+              button.style.backgroundColor = '#4a90d9';
+              button.title = '업로드';
+            }, 3000);
+          });
+        } catch (error) {
+          console.error('[Torrent Proxy] ❌ 메시지 전송 예외:', error.message);
+          button.disabled = false;
+          button.textContent = '❌';
+          button.style.backgroundColor = '#dc3545';
+          button.title = '업로드 실패: ' + error.message;
+        }
+      };
+
+      // 메시지 전송 시작 (Service Worker 깨우기 후)
+      wakeServiceWorker().then(() => {
+        sendMessageWithRetry();
+      });
     };
 
     // 호버 효과
