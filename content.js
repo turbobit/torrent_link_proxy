@@ -304,55 +304,6 @@ function processTextNodeForInlineButtons(textNode) {
   parent.dataset.torrentButtonsProcessed = 'true';
 }
 
-/**
- * 구글 번역 관련 요소인지 확인
- */
-function isGoogleTranslateElement(element) {
-  // 구글 번역 iframe 및 관련 요소 제외
-  if (element.closest('#goog-gt-tt, .goog-te-banner-frame, .goog-te-balloon-frame')) {
-    return true;
-  }
-
-  // 번역된 텍스트 컨테이너 확인
-  if (element.closest('[data-ogt-translation]')) {
-    return true;
-  }
-
-  // 구글 번역 스크립트가 추가한 요소들
-  if (element.classList && (
-    element.classList.contains('goog-te-section') ||
-    element.classList.contains('goog-te-paragraph') ||
-    element.classList.contains('goog-te-gadget')
-  )) {
-    return true;
-  }
-
-  // 번역 완료 후 추가되는 요소들 (translated-로 시작하는 클래스)
-  if (element.classList && Array.from(element.classList).some(cls => cls.startsWith('translated-'))) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * 번역 프로세스 진행 중인지 확인
- */
-function isTranslationInProgress() {
-  // 구글 번역 툴바가 있는지 확인
-  const translateToolbar = document.querySelector('#goog-gt-tt, .goog-te-banner-frame');
-  if (translateToolbar) {
-    return true;
-  }
-
-  // 번역 진행 중 표시가 있는지 확인
-  const translatingElements = document.querySelectorAll('[data-ogt-translation-progress]');
-  if (translatingElements.length > 0) {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * 페이지의 모든 텍스트 노드에 인라인 버튼 추가
@@ -370,23 +321,10 @@ function initializeInlineButtons() {
 
     // 텍스트 노드 처리 (성능 최적화: 주요 요소만 처리)
     function processVisibleNodes() {
-      // 번역 진행 중이면 잠시 대기
-      if (isTranslationInProgress()) {
-        console.log('[Torrent Proxy] ⏳ 번역 진행 중 - 잠시 대기');
-        setTimeout(processVisibleNodes, 1000);
-        return;
-      }
-
       const allElements = Array.from(document.querySelectorAll('p, div, span, li, td, h1, h2, h3, h4, h5, h6, a, article, section'));
 
-      // Nested elements 제거 및 구글 번역 요소 필터링
+      // Nested elements 제거: 부모가 이미 선택된 element는 제외 (중복 처리 방지)
       const rootElements = allElements.filter(el => {
-        // 구글 번역 관련 요소 제외
-        if (isGoogleTranslateElement(el)) {
-          return false;
-        }
-
-        // Nested elements 제거: 부모가 이미 선택된 element는 제외 (중복 처리 방지)
         let parent = el.parentElement;
         while (parent) {
           if (allElements.includes(parent)) {
@@ -423,30 +361,6 @@ function initializeInlineButtons() {
       console.log(`[Torrent Proxy] ✅ ${processedCount}개 노드 처리 완료`);
     }
 
-    // 번역 상태 모니터링
-    let lastTranslationState = false;
-    const checkTranslationState = () => {
-      const currentlyTranslating = isTranslationInProgress();
-      if (currentlyTranslating !== lastTranslationState) {
-        lastTranslationState = currentlyTranslating;
-        if (currentlyTranslating) {
-          console.log('[Torrent Proxy] 🌐 번역 시작 감지 - 옵저버 일시 중지');
-          observerPaused = true;
-        } else {
-          console.log('[Torrent Proxy] 🌐 번역 완료 감지 - 옵저버 재활성화');
-          observerPaused = false;
-          // 번역 완료 후 잠시 대기했다가 노드 재처리
-          setTimeout(() => {
-            console.log('[Torrent Proxy] 🔄 번역 완료 후 노드 재처리');
-            processVisibleNodes();
-          }, 500);
-        }
-      }
-    };
-
-    // 번역 상태 주기적 확인 (1초마다)
-    const translationCheckInterval = setInterval(checkTranslationState, 1000);
-
     // 초기 처리를 requestAnimationFrame으로 분산
     requestAnimationFrame(() => {
       console.log('[Torrent Proxy] 🔄 초기 노드 처리 시작');
@@ -454,15 +368,9 @@ function initializeInlineButtons() {
 
       // 동적으로 추가되는 요소 모니터링
       let mutationTimeout;
-      let observerPaused = false; // 번역 중 옵저버 일시 중지 플래그
 
       const observer = new MutationObserver((mutations) => {
-        // 번역 진행 중이면 옵저버 일시 중지
-        if (observerPaused || isTranslationInProgress()) {
-          return;
-        }
-
-        // debounce: 300ms 동안 변화를 모아서 처리 (번역 감지용으로 증가)
+        // debounce: 200ms 동안 변화를 모아서 처리
         clearTimeout(mutationTimeout);
         mutationTimeout = setTimeout(() => {
           let newNodesCount = 0;
@@ -480,9 +388,6 @@ function initializeInlineButtons() {
                   if (node.className === 'torrent-upload-inline-btn') return;
                   if (node.dataset?.torrentMatched === 'true') return;
                   if (node.dataset?.torrentButtonsProcessed === 'true') return;
-
-                  // 구글 번역 관련 요소 제외
-                  if (isGoogleTranslateElement(node)) return;
 
                   processedNodes.add(node);
                   const walker = document.createTreeWalker(
@@ -536,7 +441,6 @@ function initializeInlineButtons() {
       const cleanup = () => {
         console.log('[Torrent Proxy] 🧹 정리 중...');
         observer.disconnect();
-        clearInterval(translationCheckInterval);
         clearTimeout(mutationTimeout);
       };
 
