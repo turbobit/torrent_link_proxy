@@ -64,7 +64,7 @@ function saveSettings(settings) {
 // RPC 요청 유틸리티 (타임아웃: 10초)
 const RPC_TIMEOUT = 10000;
 
-function transmissionRpc(serverUrl, method, params = null) {
+function transmissionRpc(serverUrl, method, params = null, username = null, password = null) {
   return new Promise((resolve, reject) => {
     const rpcUrl = serverUrl.endsWith('/') ? `${serverUrl}rpc` : `${serverUrl}/rpc`;
     debugLog('[RPC]', `📤 요청: ${method}`);
@@ -83,6 +83,13 @@ function transmissionRpc(serverUrl, method, params = null) {
     const headers = {
       'Content-Type': 'application/json',
     };
+
+    // Basic Auth 헤더 추가
+    if (username || password) {
+      const base64Credentials = btoa(`${username}:${password}`);
+      headers['Authorization'] = `Basic ${base64Credentials}`;
+      debugLog('[RPC]', `🔑 인증 헤더 추가됨`);
+    }
 
     // 세션 ID가 있으면 추가 (CSRF 보호)
     if (globalSessionId) {
@@ -112,12 +119,18 @@ function transmissionRpc(serverUrl, method, params = null) {
         console.log(`[Transmission RPC] ⚠️ 세션 ID 갱신 필요`);
         globalSessionId = response.headers.get('X-Transmission-Session-Id');
         console.log(`[Transmission RPC] ✅ 새 세션 ID: ${globalSessionId}`);
+        const retryHeaders = {
+          'Content-Type': 'application/json',
+          'X-Transmission-Session-Id': globalSessionId
+        };
+        // 인증 정보도 함께 전달
+        if (username || password) {
+          const base64Credentials = btoa(`${username}:${password}`);
+          retryHeaders['Authorization'] = `Basic ${base64Credentials}`;
+        }
         return fetch(rpcUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Transmission-Session-Id': globalSessionId
-          },
+          headers: retryHeaders,
           body: JSON.stringify(request)
         });
       }
@@ -151,10 +164,10 @@ function transmissionRpc(serverUrl, method, params = null) {
 }
 
 // Transmission 서버 연결 테스트
-async function testConnection(serverUrl) {
+async function testConnection(serverUrl, username = null, password = null) {
   try {
     globalSessionId = null; // 세션 ID 초기화
-    const result = await transmissionRpc(serverUrl, 'session-get');
+    const result = await transmissionRpc(serverUrl, 'session-get', null, username, password);
     return { success: true, version: result?.version };
   } catch (error) {
     return { success: false, error: error.message };
@@ -292,16 +305,17 @@ function showNotification(title, message) {
     chrome.notifications.create('torrent-' + Date.now(), {
       type: 'basic',
       title: title,
-      message: message,
-      priority: 2
-    }, () => {
+      message: message
+    }, (notificationId) => {
       // 알림 생성 완료
       if (chrome.runtime.lastError) {
-        console.error('Notification error:', chrome.runtime.lastError);
+        console.error('[Notification] ❌ 알림 생성 실패:', chrome.runtime.lastError.message);
+      } else {
+        console.log('[Notification] ✅ 알림 생성 성공:', notificationId);
       }
     });
   } catch (error) {
-    console.error('Notification error:', error);
+    console.error('[Notification] ❌ 알림 생성 예외:', error.message);
   }
 }
 
@@ -359,7 +373,7 @@ async function showResultNotification(status, message, options = {}) {
 }
 
 // Magnet link 또는 torrent file을 Transmission에 추가
-async function addTorrentToTransmission(serverUrl, torrentInfo) {
+async function addTorrentToTransmission(serverUrl, torrentInfo, username = null, password = null) {
   globalSessionId = null; // 세션 ID 초기화
   console.log(`\n[Transmission Add] 🚀 토렌트 추가 시작`);
   console.log(`[Transmission Add] 📍 서버: ${serverUrl}`);
@@ -374,7 +388,7 @@ async function addTorrentToTransmission(serverUrl, torrentInfo) {
       console.log(`[Transmission Add] 📤 RPC 요청 중...`);
       result = await transmissionRpc(serverUrl, 'torrent-add', {
         filename: torrentInfo.magnetLink
-      });
+      }, username, password);
       console.log(`[Transmission Add] 📥 RPC 응답 완료`);
     } else if (torrentInfo.type === 'torrent_file') {
       // torrent 파일은 Web UI를 통해 업로드 필요 (RPC는 base64 metainfo 필요)
@@ -482,7 +496,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         const torrentInfo = parseTorrentFromText(info.linkUrl);
         if (torrentInfo) {
           console.log('Uploading magnet link:', torrentInfo);
-          const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+          const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password);
           if (result.redirect) {
             // Web UI로 리디렉션됨
             console.log('Redirected to Web UI for magnet link');
@@ -517,7 +531,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           url: info.linkUrl
         };
         console.log('Uploading torrent file:', torrentInfo);
-        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password);
         if (result.redirect) {
           console.log('Redirected to Web UI for torrent file');
         } else {
@@ -551,7 +565,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
         if (torrentInfo) {
           console.log('Found valid torrent info at token index', foundTokenIndex, ':', torrentInfo);
-          const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+          const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password);
           if (result.redirect) {
             // Web UI로 리디렉션됨
             console.log('Redirected to Web UI for hash');
@@ -612,7 +626,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           console.log('Parsed torrent info from word:', torrentInfo);
 
           if (torrentInfo && (torrentInfo.type === 'magnet' || torrentInfo.type === 'hash')) {
-            addTorrentToTransmission(settings.serverUrl, torrentInfo).then((result) => {
+            addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password).then((result) => {
               if (result.redirect) {
                 console.log('Redirected to Web UI for hash');
               } else if (result.success) {
@@ -730,7 +744,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log(`[Inline Button] ⏳ 업로드 시작...`);
         showResultNotification('processing', '토렌트 업로드 중...', { torrent: request.torrent });
 
-        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo, settings.username, settings.password);
 
         if (result.success) {
           const message = result.type === 'added'

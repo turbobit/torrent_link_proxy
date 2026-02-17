@@ -105,6 +105,12 @@ function processTextNodeForInlineButtons(textNode) {
   const text = textNode.nodeValue;
   if (!text || text.length < 32) return; // 너무 짧은 텍스트는 무시
 
+  // 부모가 이미 처리되었는지 확인 (중복 처리 방지)
+  const parent = textNode.parentNode;
+  if (parent?.dataset?.torrentButtonsProcessed === 'true') {
+    return;
+  }
+
   // 빠른 필터링: 키워드 포함 확인
   if (!text.includes('magnet') && !/[a-fA-F0-9]{40}/.test(text) && !/[a-zA-Z2-7]{32}/.test(text)) {
     return;
@@ -175,20 +181,34 @@ function processTextNodeForInlineButtons(textNode) {
       button.textContent = '⟳';
       button.style.backgroundColor = '#666';
 
-      chrome.runtime.sendMessage({
-        action: 'uploadFromInline',
-        torrent: m.text,
-        type: m.type
-      }, (response) => {
-        console.log('[Torrent Proxy] ✅ 응답 받음:', response);
+      try {
+        chrome.runtime.sendMessage({
+          action: 'uploadFromInline',
+          torrent: m.text,
+          type: m.type
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('[Torrent Proxy] ❌ Context Error:', chrome.runtime.lastError.message);
+            button.disabled = false;
+            button.textContent = '❌';
+            button.style.backgroundColor = '#dc3545';
+            return;
+          }
+          console.log('[Torrent Proxy] ✅ 응답 받음:', response);
 
-        // 버튼 상태 복원
-        setTimeout(() => {
-          button.disabled = false;
-          button.textContent = originalText;
-          button.style.backgroundColor = '#4a90d9';
-        }, 2000);
-      });
+          // 버튼 상태 복원
+          setTimeout(() => {
+            button.disabled = false;
+            button.textContent = originalText;
+            button.style.backgroundColor = '#4a90d9';
+          }, 2000);
+        });
+      } catch (error) {
+        console.error('[Torrent Proxy] ❌ 메시지 전송 오류:', error.message);
+        button.disabled = false;
+        button.textContent = '❌';
+        button.style.backgroundColor = '#dc3545';
+      }
     };
 
     // 호버 효과
@@ -204,6 +224,7 @@ function processTextNodeForInlineButtons(textNode) {
     // 매칭된 텍스트를 span으로 감싸기
     const span = document.createElement('span');
     span.textContent = m.text;
+    span.dataset.torrentMatched = 'true';
     fragment.appendChild(span);
 
     lastIndex = m.end;
@@ -215,7 +236,10 @@ function processTextNodeForInlineButtons(textNode) {
   }
 
   // 텍스트 노드를 fragment로 교체
-  textNode.parentNode.replaceChild(fragment, textNode);
+  parent.replaceChild(fragment, textNode);
+
+  // 부모 요소에 처리 완료 표시 (중복 처리 방지)
+  parent.dataset.torrentButtonsProcessed = 'true';
 }
 
 /**
@@ -234,10 +258,23 @@ function initializeInlineButtons() {
 
     // 텍스트 노드 처리 (성능 최적화: 주요 요소만 처리)
     function processVisibleNodes() {
-      const elements = document.querySelectorAll('p, div, span, li, td, h1, h2, h3, h4, h5, h6, a, article, section');
+      const allElements = Array.from(document.querySelectorAll('p, div, span, li, td, h1, h2, h3, h4, h5, h6, a, article, section'));
+
+      // Nested elements 제거: 부모가 이미 선택된 element는 제외 (중복 처리 방지)
+      const rootElements = allElements.filter(el => {
+        let parent = el.parentElement;
+        while (parent) {
+          if (allElements.includes(parent)) {
+            return false; // 부모가 선택됨 → 제외
+          }
+          parent = parent.parentElement;
+        }
+        return true; // 부모가 없음 → 포함
+      });
+
       let processedCount = 0;
 
-      elements.forEach(el => {
+      rootElements.forEach(el => {
         if (processedNodes.has(el)) return;
         processedNodes.add(el);
 
@@ -283,8 +320,10 @@ function initializeInlineButtons() {
                   processTextNodeForInlineButtons(node);
                   newNodesCount++;
                 } else if (node.nodeType === Node.ELEMENT_NODE) {
-                  // 버튼 요소는 무시
+                  // 버튼 요소 또는 이미 처리된 부모는 무시
                   if (node.className === 'torrent-upload-inline-btn') return;
+                  if (node.dataset?.torrentMatched === 'true') return;
+                  if (node.dataset?.torrentButtonsProcessed === 'true') return;
 
                   processedNodes.add(node);
                   const walker = document.createTreeWalker(
@@ -295,6 +334,20 @@ function initializeInlineButtons() {
                   );
                   let textNode;
                   while (textNode = walker.nextNode()) {
+                    // Ancestor 중 이미 처리된 element가 있는지 확인
+                    let isProcessed = false;
+                    let parent = textNode.parentNode;
+                    while (parent) {
+                      if (parent.dataset?.torrentButtonsProcessed === 'true') {
+                        isProcessed = true;
+                        break;
+                      }
+                      parent = parent.parentNode;
+                    }
+                    if (isProcessed) {
+                      continue;
+                    }
+
                     if (!processedNodes.has(textNode)) {
                       processedNodes.add(textNode);
                       processTextNodeForInlineButtons(textNode);
