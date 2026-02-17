@@ -1,0 +1,56 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create ZIP package
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          zip -r torrent-link-proxy-v${VERSION}.zip \
+            manifest.json background.js content.js popup.html popup.js \
+            options.html options.js icon16.svg icon48.svg icon128.svg
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## Transmission URL Supporter v${{ github.event.release.tag_name }}
+
+            Chrome 확장 프로그램 다운로드: `torrent-link-proxy-v${{ github.event.release.tag_name }}.zip`
+
+            ### 변경사항
+            - 최신 버전의 Chrome 확장 프로그램
+            - Transmission 서버와의 호환성 개선
+
+            ### 설치 방법
+            1. ZIP 파일 다운로드 및 압축 해제
+            2. `chrome://extensions/`에서 개발자 모드 활성화
+            3. "압축해제된 확장 프로그램을 로드합니다" 선택
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./torrent-link-proxy-v${{ github.event.release.tag_name }}.zip
+          asset_name: torrent-link-proxy-v${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
