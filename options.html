@@ -88,8 +88,8 @@
 
   <div class="form-group">
     <label for="serverUrl">Transmission 서버 URL</label>
-    <input type="text" id="serverUrl" placeholder="예: http://192.168.0.201:9091">
-    <div class="hint">Transmission RPC 서버의 기본 URL을 입력하세요</div>
+    <input type="text" id="serverUrl" placeholder="예: 192.168.0.201:9091 또는 http://192.168.0.201:9091">
+    <div class="hint">IP:포트 또는 전체 URL을 입력하세요. (예: 192.168.0.201:9091 또는 http://example.com:9091)</div>
   </div>
 
   <div class="form-group">
@@ -102,7 +102,51 @@
     <input type="password" id="password" placeholder="없으면 비워두세요">
   </div>
 
-  <button id="saveBtn">설정 저장</button>
+  <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+  <h2 style="color: #333; margin-top: 30px;">알림 방식 (중복 선택 가능)</h2>
+  <div class="form-group">
+    <label>토렌트 추가 시 표시 방식을 선택하세요. 여러 개를 함께 사용할 수 있습니다.</label>
+    <div style="margin-top: 10px;">
+      <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
+        <input type="checkbox" name="notificationStyle" value="badge" style="margin-right: 10px;">
+        <span><strong>1. 배지</strong> - 확장 아이콘에 배지 표시 (✓, ⚠, !)</span>
+      </label>
+      <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
+        <input type="checkbox" name="notificationStyle" value="notification" style="margin-right: 10px;">
+        <span><strong>2. 시스템 알림</strong> - 화면 우측 하단에 알림 표시</span>
+      </label>
+      <label style="display: flex; align-items: center; margin-bottom: 10px; font-weight: normal;">
+        <input type="checkbox" name="notificationStyle" value="console" style="margin-right: 10px;">
+        <span><strong>3. 콘솔 로그</strong> - 개발자 도구 콘솔에 로그 출력</span>
+      </label>
+    </div>
+  </div>
+
+  <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+  <h2 style="color: #333; margin-top: 30px;">페이지 내 기능</h2>
+  <div class="form-group">
+    <label style="display: flex; align-items: center; font-weight: normal;">
+      <input type="checkbox" id="inlineButton" style="margin-right: 10px;">
+      <span>magnet 링크 옆에 <strong>업로드 버튼</strong> 표시</span>
+    </label>
+    <div class="hint">활성화하면 페이지의 magnet 링크/해시값 옆에 작은 업로드 버튼이 나타납니다.</div>
+  </div>
+
+  <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+  <h2 style="color: #333; margin-top: 30px;">동작 URL (선택사항)</h2>
+  <div class="form-group">
+    <label>이 URL들에서만 우클릭 기능이 작동합니다. 비워두면 모든 사이트에서 작동합니다.</label>
+    <div id="urlList" style="margin-top: 10px; margin-bottom: 15px;"></div>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" id="newUrl" placeholder="예: example.com" style="flex: 1;">
+      <button id="addUrlBtn" style="padding: 10px 15px;">추가</button>
+    </div>
+  </div>
+
+  <button id="saveBtn" style="margin-top: 20px;">설정 저장</button>
   <div id="successMsg" class="success">설정이 저장되었습니다!</div>
   <div id="errorMsg" class="error">오류가 발생했습니다.</div>
 

@@ -3,7 +3,7 @@ const SETTINGS_KEY = 'transmissionSettings';
 
 // 기본 설정
 const defaultSettings = {
-  serverUrl: 'http://192.168.0.201:9091',
+  serverUrl: '',
   username: '',
   password: ''
 };
@@ -34,15 +34,17 @@ function saveSettings(settings) {
 function transmissionRpc(serverUrl, method, params = null) {
   return new Promise((resolve, reject) => {
     const rpcUrl = serverUrl.endsWith('/') ? `${serverUrl}rpc` : `${serverUrl}/rpc`;
+    console.log(`[Transmission RPC] 📤 요청: ${method}`);
+    console.log(`[Transmission RPC] 🌐 URL: ${rpcUrl}`);
 
+    // Transmission RPC 표준 형식: method와 arguments
     const request = {
-      jsonrpc: '2.0',
-      method: method,
-      id: Math.floor(Math.random() * 1000000)
+      method: method
     };
 
     if (params) {
-      request.params = params;
+      request.arguments = params;
+      console.log(`[Transmission RPC] 📋 매개변수:`, params);
     }
 
     const headers = {
@@ -52,6 +54,7 @@ function transmissionRpc(serverUrl, method, params = null) {
     // 세션 ID가 있으면 추가 (CSRF 보호)
     if (globalSessionId) {
       headers['X-Transmission-Session-Id'] = globalSessionId;
+      console.log(`[Transmission RPC] 🔐 세션 ID: ${globalSessionId}`);
     }
 
     fetch(rpcUrl, {
@@ -60,9 +63,13 @@ function transmissionRpc(serverUrl, method, params = null) {
       body: JSON.stringify(request)
     })
     .then(response => {
+      console.log(`[Transmission RPC] 📥 응답 상태: ${response.status}`);
+
       // 409 Conflict는 세션 ID가 유효하지 않을 때 발생 -> 갱신 후 재시도
       if (response.status === 409) {
+        console.log(`[Transmission RPC] ⚠️ 세션 ID 갱신 필요`);
         globalSessionId = response.headers.get('X-Transmission-Session-Id');
+        console.log(`[Transmission RPC] ✅ 새 세션 ID: ${globalSessionId}`);
         return fetch(rpcUrl, {
           method: 'POST',
           headers: {
@@ -77,6 +84,7 @@ function transmissionRpc(serverUrl, method, params = null) {
     .then(response => {
       if (!response.ok) {
         return response.text().then(text => {
+          console.error(`[Transmission RPC] ❌ HTTP 오류:`, text);
           throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
         });
       }
@@ -84,11 +92,17 @@ function transmissionRpc(serverUrl, method, params = null) {
     })
     .then(data => {
       if (data.error) {
+        console.error(`[Transmission RPC] ❌ RPC 오류:`, data.error);
         throw new Error(data.error);
       }
-      resolve(data.result);
+      // Transmission RPC는 arguments와 result를 모두 반환
+      // arguments에 실제 응답 데이터가 포함됨
+      const result = data.arguments || data.result;
+      console.log(`[Transmission RPC] ✅ 성공:`, result);
+      resolve(result);
     })
     .catch(error => {
+      console.error(`[Transmission RPC] ❌ 오류:`, error.message);
       reject(error);
     });
   });
@@ -217,29 +231,108 @@ function createContextMenus() {
     ]
   });
 
-  // 텍스트 선택 시 ( info hash 직접 입력 가능 )
+  // 텍스트 선택 시 또는 페이지 우클릭 시 ( info hash 직접 입력 가능 )
   chrome.contextMenus.create({
     id: 'upload With Hash',
     title: 'Transmission에 업로드 (해시값)',
-    contexts: ['selection']
+    contexts: ['selection', 'page']
   });
+}
+
+// 시스템 알림 표시
+function showNotification(title, message) {
+  try {
+    chrome.notifications.create('torrent-' + Date.now(), {
+      type: 'basic',
+      title: title,
+      message: message,
+      priority: 2
+    }, () => {
+      // 알림 생성 완료
+      if (chrome.runtime.lastError) {
+        console.error('Notification error:', chrome.runtime.lastError);
+      }
+    });
+  } catch (error) {
+    console.error('Notification error:', error);
+  }
+}
+
+// 사용자 설정에 따라 결과 표시 (badge, notification, console)
+async function showResultNotification(status, message, options = {}) {
+  const settings = await getSettings();
+  const notificationStyles = settings.notificationStyles || ['badge', 'notification'];
+  const isError = status === 'error';
+  const isDuplicate = status === 'duplicate';
+  const isProcessing = status === 'processing';
+
+  // Badge 표시 (설정에서 활성화된 경우)
+  if (notificationStyles.includes('badge')) {
+    let badgeText = '✓';
+    let badgeColor = '#00aa00';
+
+    if (isError) {
+      badgeText = '!';
+      badgeColor = '#ff0000';
+    } else if (isDuplicate) {
+      badgeText = '⚠';
+      badgeColor = '#FFA500';
+    } else if (isProcessing) {
+      badgeText = '⊙';
+      badgeColor = '#4a90d9';
+    }
+
+    chrome.action.setBadgeText({ text: badgeText });
+    chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+    // Processing 상태는 자동 지우지 않음 (결과 상태로 업데이트됨)
+    if (!isProcessing) {
+      setTimeout(() => {
+        chrome.action.setBadgeText({ text: '' });
+      }, 2000);
+    }
+  }
+
+  // 시스템 알림 표시 (설정에서 활성화된 경우)
+  if (notificationStyles.includes('notification')) {
+    let title = 'Transmission';
+    if (isError) {
+      title = 'Transmission - 오류';
+    } else if (isProcessing) {
+      title = 'Transmission - 처리 중';
+    }
+    showNotification(title, message);
+  }
+
+  // 콘솔 로그 출력 (설정에서 활성화된 경우)
+  if (notificationStyles.includes('console')) {
+    const logLevel = isError ? 'error' : 'log';
+    console[logLevel](`[Transmission Result - ${status}]:`, message, options);
+  }
 }
 
 // Magnet link 또는 torrent file을 Transmission에 추가
 async function addTorrentToTransmission(serverUrl, torrentInfo) {
   globalSessionId = null; // 세션 ID 초기화
+  console.log(`\n[Transmission Add] 🚀 토렌트 추가 시작`);
+  console.log(`[Transmission Add] 📍 서버: ${serverUrl}`);
+  console.log(`[Transmission Add] 📦 타입: ${torrentInfo.type}`);
+  console.log(`[Transmission Add] 🔗 정보: ${torrentInfo.magnetLink || torrentInfo.infoHash || torrentInfo.url}`);
 
   try {
     let result;
 
     if (torrentInfo.type === 'magnet' || torrentInfo.type === 'hash') {
       // Magnet link 추가
+      console.log(`[Transmission Add] 📤 RPC 요청 중...`);
       result = await transmissionRpc(serverUrl, 'torrent-add', {
         filename: torrentInfo.magnetLink
       });
+      console.log(`[Transmission Add] 📥 RPC 응답 완료`);
     } else if (torrentInfo.type === 'torrent_file') {
       // torrent 파일은 Web UI를 통해 업로드 필요 (RPC는 base64 metainfo 필요)
       // Web UI의 #upload 섹션으로 리디렉션
+      console.log(`[Transmission Add] 🌐 웹 UI로 리디렉션`);
       const webUrl = createWebUrl(serverUrl);
       const uploadUrl = `${webUrl}?magnet=${encodeURIComponent(torrentInfo.url)}`;
       chrome.tabs.create({ url: uploadUrl });
@@ -247,22 +340,92 @@ async function addTorrentToTransmission(serverUrl, torrentInfo) {
     }
 
     if (result) {
+      // torrent-added (새로 추가됨) 또는 torrent-duplicate (이미 있음) 확인
+      const isAdded = result?.['torrent-added'];
+      const isDuplicate = result?.['torrent-duplicate'];
+
+      let torrentId, hashString, type;
+
+      if (isAdded) {
+        torrentId = isAdded.id;
+        hashString = isAdded.hashString;
+        type = 'added';
+        console.log(`[Transmission Add] ✅ 새 토렌트 추가됨`);
+        console.log(`[Transmission Add] 📌 ID: ${torrentId}`);
+        console.log(`[Transmission Add] 🔐 Hash: ${hashString}`);
+      } else if (isDuplicate) {
+        torrentId = isDuplicate.id;
+        hashString = isDuplicate.hashString;
+        type = 'duplicate';
+        console.log(`[Transmission Add] ⚠️ 중복 토렌트 (이미 존재)`);
+        console.log(`[Transmission Add] 📌 ID: ${torrentId}`);
+        console.log(`[Transmission Add] 🔐 Hash: ${hashString}`);
+      } else {
+        console.warn(`[Transmission Add] ⚠️ 알 수 없는 응답:`, result);
+      }
+
       return {
         success: true,
-        torrentId: result?.['torrent-added']?.id,
-        hashString: result?.['torrent-added']?.hashString
+        type: type,
+        torrentId: torrentId,
+        hashString: hashString
       };
     }
 
+    console.error(`[Transmission Add] ❌ 응답이 없습니다`);
     return { success: false, error: 'Unknown error' };
   } catch (error) {
+    console.error(`[Transmission Add] ❌ 오류 발생:`, error.message);
     return { success: false, error: error.message };
+  }
+}
+
+// URL이 allowedUrls와 일치하는지 확인
+function isUrlAllowed(tabUrl, allowedUrls) {
+  // allowedUrls가 비어있으면 모든 URL 허용
+  if (!allowedUrls || allowedUrls.length === 0) {
+    return true;
+  }
+
+  try {
+    const url = new URL(tabUrl);
+    const currentDomain = url.hostname;
+
+    // allowedUrls의 각 항목과 비교 (도메인 매칭)
+    return allowedUrls.some(allowedUrl => {
+      // allowedUrl이 도메인만인 경우와 전체 URL인 경우 모두 처리
+      let allowedDomain = allowedUrl.trim();
+
+      // http:// 또는 https://를 제거
+      if (allowedDomain.startsWith('http://')) {
+        allowedDomain = allowedDomain.substring(7);
+      } else if (allowedDomain.startsWith('https://')) {
+        allowedDomain = allowedDomain.substring(8);
+      }
+
+      // 끝의 / 제거
+      allowedDomain = allowedDomain.replace(/\/$/, '');
+
+      // 도메인 또는 서브도메인 매칭
+      return currentDomain === allowedDomain || currentDomain.endsWith('.' + allowedDomain);
+    });
+  } catch (error) {
+    console.error('URL parsing error:', error);
+    return false;
   }
 }
 
 // 컨텍스트 메뉴 클릭 핸들러
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const settings = await getSettings();
+
+  // URL allowlist 확인
+  if (!isUrlAllowed(tab.url, settings.allowedUrls)) {
+    console.log('URL not allowed:', tab.url, 'allowedUrls:', settings.allowedUrls);
+    showResultNotification('error', '이 사이트에서는 확장 기능이 비활성화되어 있습니다');
+    return;
+  }
+
   const uploadUrl = createWebUrl(settings.serverUrl);
 
   switch (info.menuItemId) {
@@ -271,24 +434,33 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       if (info.linkUrl.startsWith('magnet:')) {
         const torrentInfo = parseTorrentFromText(info.linkUrl);
         if (torrentInfo) {
+          console.log('Uploading magnet link:', torrentInfo);
           const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
           if (result.redirect) {
             // Web UI로 리디렉션됨
+            console.log('Redirected to Web UI for magnet link');
           } else if (result.success) {
-            // 성공 알림
-            chrome.action.setBadgeText({ text: 'OK' });
-            chrome.action.setBadgeBackgroundColor({ color: '#00aa00' });
-            setTimeout(() => {
-              chrome.action.setBadgeText({ text: '' });
-            }, 2000);
+            // 성공 알림 (새로 추가됨 또는 중복)
+            const message = result.type === 'added'
+              ? '새로운 토렌트 추가됨'
+              : '이미 올라간 토렌트입니다';
+            console.log(`Success (${result.type}): Magnet link`, {
+              message: message,
+              torrentId: result.torrentId,
+              hashString: result.hashString
+            });
+            showResultNotification(result.type, message, {
+              torrentId: result.torrentId,
+              hashString: result.hashString
+            });
           } else {
             // 실패 알림
-            chrome.action.setBadgeText({ text: '!' });
-            chrome.action.setBadgeBackgroundColor({ color: '#ff0000' });
-            setTimeout(() => {
-              chrome.action.setBadgeText({ text: '' });
-            }, 2000);
+            console.error('Failed to add magnet link:', result.error);
+            const errorMsg = `오류: ${result.error}`;
+            showResultNotification('error', errorMsg);
           }
+        } else {
+          console.error('Failed to parse magnet link:', info.linkUrl);
         }
       }
       // torrent 파일 링크인 경우
@@ -297,44 +469,137 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           type: 'torrent_file',
           url: info.linkUrl
         };
+        console.log('Uploading torrent file:', torrentInfo);
         const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
-        if (!result.redirect) {
+        if (result.redirect) {
+          console.log('Redirected to Web UI for torrent file');
+        } else {
+          console.log('Torrent file handling completed');
           chrome.tabs.create({ url: info.linkUrl });
         }
       }
       break;
 
     case 'upload With Hash':
-      // 선택한 텍스트에서 토렌트 정보 파싱
-      const selectedText = info.selectionText.trim();
-      const torrentInfo = parseTorrentFromText(selectedText);
+      // 선택한 텍스트가 있는지 확인
+      const selectedText = info.selectionText?.trim();
 
-      if (torrentInfo && (torrentInfo.type === 'magnet' || torrentInfo.type === 'hash')) {
-        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
-        if (result.redirect) {
-          // Web UI로 리디렉션됨
-        } else if (result.success) {
-          // 성공 알림
-          chrome.action.setBadgeText({ text: 'OK' });
-          chrome.action.setBadgeBackgroundColor({ color: '#00aa00' });
-          setTimeout(() => {
-            chrome.action.setBadgeText({ text: '' });
-          }, 2000);
+      if (selectedText) {
+        // ===== 선택 영역이 있는 경우: 공백으로 분리 =====
+        const tokens = selectedText.split(/\s+/); // 공백으로 분리
+        console.log('Selected text tokens:', tokens);
+
+        let torrentInfo = null;
+        let foundTokenIndex = -1;
+
+        // 각 토큰을 순회하며 첫 번째 유효한 토렌트 정보 찾기
+        for (let i = 0; i < tokens.length; i++) {
+          const parsed = parseTorrentFromText(tokens[i]);
+          if (parsed && (parsed.type === 'magnet' || parsed.type === 'hash')) {
+            torrentInfo = parsed;
+            foundTokenIndex = i;
+            break;
+          }
+        }
+
+        if (torrentInfo) {
+          console.log('Found valid torrent info at token index', foundTokenIndex, ':', torrentInfo);
+          const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+          if (result.redirect) {
+            // Web UI로 리디렉션됨
+            console.log('Redirected to Web UI for hash');
+          } else if (result.success) {
+            // 성공 알림 (새로 추가됨 또는 중복)
+            const message = result.type === 'added'
+              ? '새로운 토렌트 추가됨'
+              : '이미 올라간 토렌트입니다';
+            console.log(`Success (${result.type}): Hash/Magnet added to Transmission`, {
+              message: message,
+              torrentId: result.torrentId,
+              hashString: result.hashString,
+              token: tokens[foundTokenIndex]
+            });
+            showResultNotification(result.type, message, {
+              torrentId: result.torrentId,
+              hashString: result.hashString,
+              token: tokens[foundTokenIndex]
+            });
+          } else {
+            // 실패 알림
+            console.error('Failed to add hash/magnet:', {
+              error: result.error,
+              token: tokens[foundTokenIndex]
+            });
+            const errorMsg = `오류: ${result.error}`;
+            showResultNotification('error', errorMsg);
+          }
         } else {
-          // 실패 알림
-          chrome.action.setBadgeText({ text: '!' });
-          chrome.action.setBadgeBackgroundColor({ color: '#ff0000' });
-          setTimeout(() => {
-            chrome.action.setBadgeText({ text: '' });
-          }, 2000);
+          // 유효하지 않은 형식
+          console.error('No valid torrent information found in selection', {
+            selectedText: selectedText,
+            tokens: tokens
+          });
+          showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
         }
       } else {
-        // 유효하지 않은 형식
-        chrome.action.setBadgeText({ text: '!' });
-        chrome.action.setBadgeBackgroundColor({ color: '#ff0000' });
-        setTimeout(() => {
-          chrome.action.setBadgeText({ text: '' });
-        }, 2000);
+        // ===== 선택 영역이 없는 경우: Content Script에서 클릭 위치의 단어 추출 =====
+        console.log('No selection. Requesting word at cursor from content script');
+        chrome.tabs.sendMessage(tab.id, { action: 'getWordAtCursor' }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Content script error:', chrome.runtime.lastError);
+            showResultNotification('error', 'Content Script 오류');
+            return;
+          }
+
+          const word = response?.word?.trim();
+          console.log('Word at cursor:', word);
+
+          if (!word) {
+            console.error('No word found at cursor position');
+            showResultNotification('error', '커서 위치에서 텍스트를 찾을 수 없습니다');
+            return;
+          }
+
+          // 추출된 단어를 파싱
+          const torrentInfo = parseTorrentFromText(word);
+          console.log('Parsed torrent info from word:', torrentInfo);
+
+          if (torrentInfo && (torrentInfo.type === 'magnet' || torrentInfo.type === 'hash')) {
+            addTorrentToTransmission(settings.serverUrl, torrentInfo).then((result) => {
+              if (result.redirect) {
+                console.log('Redirected to Web UI for hash');
+              } else if (result.success) {
+                const message = result.type === 'added'
+                  ? '새로운 토렌트 추가됨'
+                  : '이미 올라간 토렌트입니다';
+                console.log(`Success (${result.type}): Hash/Magnet added to Transmission`, {
+                  message: message,
+                  torrentId: result.torrentId,
+                  hashString: result.hashString,
+                  word: word
+                });
+                showResultNotification(result.type, message, {
+                  torrentId: result.torrentId,
+                  hashString: result.hashString,
+                  word: word
+                });
+              } else {
+                console.error('Failed to add hash/magnet:', {
+                  error: result.error,
+                  word: word
+                });
+                const errorMsg = `오류: ${result.error}`;
+                showResultNotification('error', errorMsg);
+              }
+            });
+          } else {
+            console.error('Invalid torrent information', {
+              word: word,
+              torrentInfo: torrentInfo
+            });
+            showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
+          }
+        });
       }
       break;
   }
@@ -379,6 +644,73 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     addTorrentToTransmission(request.serverUrl, request.torrentInfo).then(result => {
       sendResponse(result);
     });
+    return true; // 비동기 응답
+  }
+
+  // Content Script에서 인라인 버튼 클릭으로 온 요청
+  if (request.action === 'uploadFromInline') {
+    (async () => {
+      try {
+        console.log(`\n[Inline Button] 🔘 버튼 클릭됨`);
+        const settings = await getSettings();
+
+        // 서버 URL 확인
+        if (!settings.serverUrl) {
+          console.error(`[Inline Button] ❌ 서버 URL이 설정되지 않음`);
+          showResultNotification('error', 'Transmission 서버 URL이 설정되지 않았습니다');
+          sendResponse({ success: false, error: 'Server URL not configured' });
+          return;
+        }
+
+        console.log(`[Inline Button] ✅ 서버 설정 확인됨: ${settings.serverUrl}`);
+
+        // Torrent 정보 파싱
+        console.log(`[Inline Button] 🔍 토렌트 정보 파싱 중...`);
+        const torrentInfo = parseTorrentFromText(request.torrent);
+        if (!torrentInfo) {
+          console.error(`[Inline Button] ❌ 유효한 토렌트 정보 없음: ${request.torrent}`);
+          showResultNotification('error', '유효한 토렌트 정보를 찾을 수 없습니다');
+          sendResponse({ success: false, error: 'Invalid torrent format' });
+          return;
+        }
+
+        console.log(`[Inline Button] ✅ 파싱 완료:`, {
+          type: torrentInfo.type,
+          magnetLink: torrentInfo.magnetLink
+        });
+
+        // 업로드 시작
+        console.log(`[Inline Button] ⏳ 업로드 시작...`);
+        showResultNotification('processing', '토렌트 업로드 중...', { torrent: request.torrent });
+
+        const result = await addTorrentToTransmission(settings.serverUrl, torrentInfo);
+
+        if (result.success) {
+          const message = result.type === 'added'
+            ? '새로운 토렌트 추가됨'
+            : '이미 올라간 토렌트입니다';
+          console.log(`[Inline Button] ✅ 업로드 성공!`);
+          console.log(`[Inline Button] 📊 상태: ${result.type}`);
+          console.log(`[Inline Button] 📌 토렌트 ID: ${result.torrentId}`);
+          console.log(`[Inline Button] 🔐 Hash: ${result.hashString}\n`);
+          showResultNotification(result.type, message, {
+            torrentId: result.torrentId,
+            hashString: result.hashString,
+            torrent: request.torrent
+          });
+          sendResponse({ success: true, type: result.type });
+        } else {
+          console.error(`[Inline Button] ❌ 업로드 실패:`, result.error);
+          showResultNotification('error', `오류: ${result.error}`);
+          sendResponse({ success: false, error: result.error });
+        }
+      } catch (error) {
+        console.error(`[Inline Button] ❌ 예외 오류:`, error.message);
+        showResultNotification('error', `오류: ${error.message}`);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+
     return true; // 비동기 응답
   }
 });
