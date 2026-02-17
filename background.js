@@ -1,3 +1,16 @@
+// 디버그 로그 활성화 여부 (개발 중에는 true, 배포 시 false)
+const DEBUG_LOGS = true;
+
+// 디버그 로그 함수
+function debugLog(tag, message, data = null) {
+  if (!DEBUG_LOGS) return;
+  if (data) {
+    console.log(`${tag} ${message}`, data);
+  } else {
+    console.log(`${tag} ${message}`);
+  }
+}
+
 // Transmission 서버 설정 저장 키
 const SETTINGS_KEY = 'transmissionSettings';
 
@@ -11,31 +24,51 @@ const defaultSettings = {
 // 전역 세션 ID (CSRF 보호용)
 let globalSessionId = null;
 
-// 설정 로드
+// 설정 캐시 (성능 최적화)
+let settingsCache = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 30000; // 30초 캐시
+
+// 설정 로드 (캐싱 포함)
 function getSettings() {
   return new Promise((resolve) => {
+    const now = Date.now();
+
+    // 캐시가 유효하면 캐시된 설정 반환
+    if (settingsCache && (now - settingsCacheTime) < SETTINGS_CACHE_TTL) {
+      resolve(settingsCache);
+      return;
+    }
+
     chrome.storage.sync.get(SETTINGS_KEY, (data) => {
       const settings = data[SETTINGS_KEY] || defaultSettings;
+      settingsCache = settings;
+      settingsCacheTime = now;
       resolve(settings);
     });
   });
 }
 
-// 설정 저장
+// 설정 저장 (캐시 업데이트 포함)
 function saveSettings(settings) {
   return new Promise((resolve) => {
     chrome.storage.sync.set({ [SETTINGS_KEY]: settings }, () => {
+      // 캐시 업데이트
+      settingsCache = settings;
+      settingsCacheTime = Date.now();
       resolve();
     });
   });
 }
 
-// RPC 요청 유틸리티
+// RPC 요청 유틸리티 (타임아웃: 10초)
+const RPC_TIMEOUT = 10000;
+
 function transmissionRpc(serverUrl, method, params = null) {
   return new Promise((resolve, reject) => {
     const rpcUrl = serverUrl.endsWith('/') ? `${serverUrl}rpc` : `${serverUrl}/rpc`;
-    console.log(`[Transmission RPC] 📤 요청: ${method}`);
-    console.log(`[Transmission RPC] 🌐 URL: ${rpcUrl}`);
+    debugLog('[RPC]', `📤 요청: ${method}`);
+    debugLog('[RPC]', `🌐 URL: ${rpcUrl}`);
 
     // Transmission RPC 표준 형식: method와 arguments
     const request = {
@@ -44,7 +77,7 @@ function transmissionRpc(serverUrl, method, params = null) {
 
     if (params) {
       request.arguments = params;
-      console.log(`[Transmission RPC] 📋 매개변수:`, params);
+      debugLog('[RPC]', `📋 매개변수:`, params);
     }
 
     const headers = {
@@ -54,14 +87,23 @@ function transmissionRpc(serverUrl, method, params = null) {
     // 세션 ID가 있으면 추가 (CSRF 보호)
     if (globalSessionId) {
       headers['X-Transmission-Session-Id'] = globalSessionId;
-      console.log(`[Transmission RPC] 🔐 세션 ID: ${globalSessionId}`);
+      debugLog('[RPC]', `🔐 세션 ID: ${globalSessionId}`);
     }
 
-    fetch(rpcUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(request)
-    })
+    // 타임아웃 Promise
+    const timeoutPromise = new Promise((_, timeoutReject) => {
+      setTimeout(() => timeoutReject(new Error('RPC request timeout')), RPC_TIMEOUT);
+    });
+
+    // fetch와 타임아웃 중 먼저 완료되는 것 사용
+    Promise.race([
+      fetch(rpcUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(request)
+      }),
+      timeoutPromise
+    ])
     .then(response => {
       console.log(`[Transmission RPC] 📥 응답 상태: ${response.status}`);
 
@@ -129,6 +171,13 @@ function extractInfoHash(magnetLink) {
   return null;
 }
 
+// 파싱용 정규식 (재사용을 위해 미리 컴파일)
+const PARSE_PATTERNS = {
+  hexHash: /^[a-fA-F0-9]{40}$/,
+  base32Hash: /^[a-zA-Z2-7]{32}$/,
+  btih: /btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i
+};
+
 // 텍스트에서 토렌트 정보 파싱 (magnet link, info hash, torrent 파일 링크)
 function parseTorrentFromText(text) {
   const trimmedText = text.trim();
@@ -146,22 +195,20 @@ function parseTorrentFromText(text) {
   }
 
   // 2. 40자 16진수 정보 해시 확인 (대소문자 구분 없음)
-  const hexHashMatch = trimmedText.match(/^[a-fA-F0-9]{40}$/);
-  if (hexHashMatch) {
+  if (PARSE_PATTERNS.hexHash.test(trimmedText)) {
     return {
       type: 'hash',
-      infoHash: hexHashMatch[0].toUpperCase(),
-      magnetLink: `magnet:?xt=urn:btih:${hexHashMatch[0].toUpperCase()}`
+      infoHash: trimmedText.toUpperCase(),
+      magnetLink: `magnet:?xt=urn:btih:${trimmedText.toUpperCase()}`
     };
   }
 
   // 3. 32자 Base32 해시 확인
-  const base32HashMatch = trimmedText.match(/^[a-zA-Z2-7]{32}$/);
-  if (base32HashMatch) {
+  if (PARSE_PATTERNS.base32Hash.test(trimmedText)) {
     return {
       type: 'hash',
-      infoHash: base32HashMatch[0].toUpperCase(),
-      magnetLink: `magnet:?xt=urn:btih:${base32HashMatch[0].toUpperCase()}`
+      infoHash: trimmedText.toUpperCase(),
+      magnetLink: `magnet:?xt=urn:btih:${trimmedText.toUpperCase()}`
     };
   }
 
