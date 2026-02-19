@@ -7,8 +7,6 @@
     "message": "Right-click to upload magnet links or torrent files to Transmission server",
     "description": "Extension description"
   },
-
-  // Popup UI
   "popupTitle": {
     "message": "Transmission URL Supporter",
     "description": "Popup window title"
@@ -49,8 +47,6 @@
     "message": "3. Right-click and select 'Upload to Transmission'",
     "description": "Third instruction"
   },
-
-  // Options page
   "settingsTitle": {
     "message": "Transmission URL Supporter Settings",
     "description": "Options page title"
@@ -147,8 +143,6 @@
     "message": "Test Connection",
     "description": "Test connection button text"
   },
-
-  // Context menu
   "contextMenuUpload": {
     "message": "Upload to Transmission",
     "description": "Context menu item for uploading"
@@ -157,8 +151,6 @@
     "message": "Upload to Transmission (Hash)",
     "description": "Context menu item for hash upload"
   },
-
-  // Notifications
   "notificationUploading": {
     "message": "Uploading torrent...",
     "description": "Notification when uploading starts"
@@ -199,8 +191,6 @@
     "message": "Cannot find text at cursor position",
     "description": "Notification when no text at cursor"
   },
-
-  // Error messages
   "errorGeneric": {
     "message": "Error",
     "description": "Generic error prefix"
@@ -213,8 +203,6 @@
     "message": "Server URL not configured",
     "description": "Server not configured error"
   },
-
-  // Status messages
   "statusConnected": {
     "message": "Connected",
     "description": "Connection status: connected"
