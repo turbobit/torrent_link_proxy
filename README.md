@@ -110,14 +110,52 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 
 ## 빌드 및 배포
 
+### 빌드 방법
+
+프로젝트에는 각 플랫폼에 맞는 빌드 스크립트가 포함되어 있습니다.
+
+#### 자동 빌드 (권장)
+
+**Windows:**
+```powershell
+# Python 스크립트 사용 (크로스 플랫폼)
+python3 create-release.py
+
+# 또는 PowerShell 스크립트
+PowerShell -ExecutionPolicy Bypass -File create-release.ps1
+```
+
+**Linux/Mac:**
+```bash
+# Python 스크립트 사용 (크로스 플랫폼)
+python3 create-release.py
+
+# 또는 Bash 스크립트
+bash create-release.sh
+```
+
+빌드 스크립트는 다음 파일들을 자동으로 포함합니다:
+- `manifest.json`
+- `background.js`, `content.js`
+- `popup.html`, `popup.js`
+- `options.html`, `options.js`
+- `icon*.svg` (아이콘 파일들)
+- `_locales/` (다국어 파일들)
+
+#### 수동 빌드
+
+수동으로 ZIP 파일을 생성하려면:
+```bash
+zip -r torrent-link-proxy.zip manifest.json background.js content.js popup.html popup.js options.html options.js icon*.svg _locales/
+```
+
 ### Chrome Web Store 배포
-1. `manifest.json` 검증
-2. 배포용 ZIP 파일 생성:
-   ```bash
-   zip -r torrent-link-proxy-v1.0.0.zip manifest.json background.js content.js popup.html popup.js options.html options.js icon*.svg
-   ```
-3. [Chrome Developer Dashboard](https://chrome.google.com/webstore/developer/dashboard)에서 업로드
-4. 검토 및 게시
+
+1. 빌드 스크립트 실행 또는 수동으로 `torrent-link-proxy.zip` 생성
+2. `manifest.json` 검증 (Chrome 확장 프로그램 매니페스트 유효성 검사)
+3. [Chrome Developer Dashboard](https://chrome.google.com/webstore/developer/dashboard) 접속
+4. "새 항목" 클릭 후 생성된 ZIP 파일 업로드
+5. 검토 및 게시
 
 ### GitHub Pages
 프로젝트 웹사이트는 GitHub Pages에서 호스팅됩니다:
