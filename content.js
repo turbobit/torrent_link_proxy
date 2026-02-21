@@ -1,3 +1,9 @@
+(() => {
+if (window.__torrentProxyContentScriptInjected) {
+  return;
+}
+window.__torrentProxyContentScriptInjected = true;
+
 // Content Script: 웹 페이지에서 실행되어 마우스 위치 정보 제공
 
 let lastClickPosition = null;
@@ -631,3 +637,5 @@ window.addEventListener('beforeunload', () => {
     window.torrentProxyCleanup();
   }
 });
+
+})();

@@ -482,8 +482,122 @@ function isUrlAllowed(tabUrl, allowedUrls) {
   }
 }
 
+const ALLOWED_ORIGINS_KEY = 'activeTabAllowedOrigins';
+
+function isInjectableUrl(url) {
+  return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+}
+
+function getOriginFromUrl(url) {
+  if (!isInjectableUrl(url)) return null;
+  try {
+    return new URL(url).origin;
+  } catch (error) {
+    console.error('Invalid tab URL:', url, error);
+    return null;
+  }
+}
+
+function getAllowedOrigins() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(ALLOWED_ORIGINS_KEY, (data) => {
+      const origins = data[ALLOWED_ORIGINS_KEY];
+      resolve(Array.isArray(origins) ? origins : []);
+    });
+  });
+}
+
+function saveAllowedOrigins(origins) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set({ [ALLOWED_ORIGINS_KEY]: origins }, resolve);
+  });
+}
+
+async function rememberAllowedOrigin(origin) {
+  const origins = await getAllowedOrigins();
+  if (!origins.includes(origin)) {
+    origins.push(origin);
+    await saveAllowedOrigins(origins);
+  }
+}
+
+async function updateBadgeForTab(tabId, tabUrl) {
+  const origin = getOriginFromUrl(tabUrl);
+  if (!origin) {
+    chrome.action.setBadgeText({ tabId, text: '' });
+    return;
+  }
+
+  const origins = await getAllowedOrigins();
+  const isAllowed = origins.includes(origin);
+
+  chrome.action.setBadgeText({ tabId, text: isAllowed ? 'ON' : '' });
+  if (isAllowed) {
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f855a' });
+  }
+}
+
+async function ensureContentScriptInjected(tabId) {
+  if (!tabId) return false;
+
+  try {
+    const probeResults = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => Boolean(window.__torrentProxyContentScriptInjected)
+    });
+    const alreadyInjected = Array.isArray(probeResults) && probeResults[0]?.result === true;
+
+    if (!alreadyInjected) {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content.js']
+      });
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Failed to inject content script:', error);
+    return false;
+  }
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id || !isInjectableUrl(tab.url)) {
+    return;
+  }
+
+  const origin = getOriginFromUrl(tab.url);
+  if (!origin) return;
+
+  await rememberAllowedOrigin(origin);
+  await ensureContentScriptInjected(tab.id);
+  await updateBadgeForTab(tab.id, tab.url);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'complete' && !changeInfo.url) {
+    return;
+  }
+
+  updateBadgeForTab(tabId, tab?.url || changeInfo.url);
+});
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError || !tab) {
+      return;
+    }
+    updateBadgeForTab(tabId, tab.url);
+  });
+});
+
 // 컨텍스트 메뉴 클릭 핸들러
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab?.id || !tab.url) {
+    return;
+  }
+
   const settings = await getSettings();
 
   // URL allowlist 확인
@@ -492,8 +606,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     showResultNotification('error', chrome.i18n.getMessage('notificationExtensionDisabled'));
     return;
   }
-
-  const uploadUrl = createWebUrl(settings.serverUrl);
 
   switch (info.menuItemId) {
     case 'upload Torrent':
@@ -610,6 +722,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
       } else {
         // ===== 선택 영역이 없는 경우: Content Script에서 클릭 위치의 단어 추출 =====
+        await ensureContentScriptInjected(tab.id);
         console.log('No selection. Requesting word at cursor from content script');
         chrome.tabs.sendMessage(tab.id, { action: 'getWordAtCursor' }, (response) => {
           if (chrome.runtime.lastError) {
