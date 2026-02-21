@@ -104,77 +104,6 @@ function normalizeServerUrl(url) {
   }
 }
 
-// Transmission 서버 연결 테스트
-async function testConnection(serverUrl, username, password) {
-  return new Promise((resolve) => {
-    // RPC 엔드포인트 생성
-    let rpcUrl = serverUrl;
-    if (!rpcUrl.endsWith('/')) {
-      rpcUrl += '/';
-    }
-    rpcUrl += 'rpc';
-
-    // 세션 ID 초기화
-    let sessionId = null;
-
-    // 기본 session-get 요청
-    const request = {
-      jsonrpc: '2.0',
-      method: 'session-get',
-      id: Math.floor(Math.random() * 1000000)
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    // 인증 헤더 추가 ( Basic Auth )
-    if (username || password) {
-      const base64Credentials = btoa(`${username}:${password}`);
-      headers['Authorization'] = `Basic ${base64Credentials}`;
-    }
-
-    fetch(rpcUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(request)
-    })
-    .then(response => {
-      // 409 Conflict는 세션 ID가 필요함을 의미
-      if (response.status === 409) {
-        sessionId = response.headers.get('X-Transmission-Session-Id');
-        headers['X-Transmission-Session-Id'] = sessionId;
-        return fetch(rpcUrl, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(request)
-        });
-      }
-      return response;
-    })
-    .then(response => {
-      if (response.ok) {
-        return response.json().then(data => {
-          return { success: true, version: data.result?.version };
-        });
-      }
-      return response.text().then(text => {
-        throw new Error(`HTTP ${response.status}: ${text}`);
-      });
-    })
-    .catch(error => {
-      // 인증 오류 확인
-      if (error.message.includes('401') || error.message.includes('403')) {
-        return { success: false, error: '인증 실패. 사용자 이름과 비밀번호를 확인하세요.' };
-      }
-      return { success: false, error: error.message };
-    })
-    .then(result => {
-      resolve(result);
-    });
-  });
-}
-
 // DOM이 로드된 후 초기화
 document.addEventListener('DOMContentLoaded', () => {
   // i18n 메시지 로드
@@ -336,11 +265,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     showTestResult(null, `연결 중... (${normalizedUrl})`);
 
-    testConnection(normalizedUrl, username, password).then(result => {
-      if (result.success) {
+    chrome.runtime.sendMessage({
+      action: 'testConnection',
+      serverUrl: normalizedUrl,
+      username: username,
+      password: password
+    }, (result) => {
+      if (chrome.runtime.lastError) {
+        showTestResult(false, `✗ 확장 오류: ${chrome.runtime.lastError.message}`);
+        return;
+      }
+      if (result?.success) {
         showTestResult(true, `✓ 성공! Transmission v${result.version}에 연결되었습니다.\n\n입력된 URL: ${normalizedUrl}`);
       } else {
-        showTestResult(false, `✗ 연결 실패: ${result.error}\n\n입력된 URL: ${normalizedUrl}`);
+        showTestResult(false, `✗ 연결 실패: ${result?.error || '알 수 없는 오류'}\n\n입력된 URL: ${normalizedUrl}`);
       }
     });
   });

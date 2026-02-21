@@ -311,7 +311,8 @@ function showNotification(title, message) {
     chrome.notifications.create('torrent-' + Date.now(), {
       type: 'basic',
       title: title,
-      message: message
+      message: message,
+      iconUrl: 'icon48.svg'
     }, (notificationId) => {
       // 알림 생성 완료
       if (chrome.runtime.lastError) {
@@ -522,18 +523,38 @@ async function rememberAllowedOrigin(origin) {
 }
 
 async function updateBadgeForTab(tabId, tabUrl) {
-  const origin = getOriginFromUrl(tabUrl);
-  if (!origin) {
-    chrome.action.setBadgeText({ tabId, text: '' });
-    return;
-  }
+  try {
+    const origin = getOriginFromUrl(tabUrl);
+    if (!origin) {
+      console.log(`[Badge] 탭 ${tabId}: origin 추출 실패 (URL: ${tabUrl})`);
+      return;
+    }
 
-  const origins = await getAllowedOrigins();
-  const isAllowed = origins.includes(origin);
+    console.log(`[Badge] 탭 ${tabId}: origin 확인 중 (${origin})`);
 
-  chrome.action.setBadgeText({ tabId, text: isAllowed ? 'ON' : '' });
-  if (isAllowed) {
-    chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f855a' });
+    const origins = await getAllowedOrigins();
+    const isAllowed = origins.includes(origin);
+
+    console.log(`[Badge] 탭 ${tabId}: isAllowed=${isAllowed}, 현재 허용 origins=${origins.length}개`);
+
+    if (isAllowed) {
+      // 배지 설정 (ON)
+      chrome.action.setBadgeText({ tabId, text: 'ON' });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f855a' });
+      console.log(`[Badge] 탭 ${tabId}: 배지 ON 설정 완료`);
+
+      // Content script 주입 시도
+      if (tabId) {
+        const injected = await ensureContentScriptInjected(tabId);
+        console.log(`[Badge] 탭 ${tabId}: Content script ${injected ? '새로 주입' : '이미 존재'}`);
+      }
+    } else {
+      // 배지 초기화 (허용되지 않음)
+      chrome.action.setBadgeText({ tabId, text: '' });
+      console.log(`[Badge] 탭 ${tabId}: 배지 초기화 (미허용 origin)`);
+    }
+  } catch (error) {
+    console.error(`[Badge] 탭 ${tabId} 업데이트 중 오류:`, error.message);
   }
 }
 
@@ -575,12 +596,45 @@ chrome.action.onClicked.addListener(async (tab) => {
   await updateBadgeForTab(tab.id, tab.url);
 });
 
+// 탭별 업데이트 추적 (중복 호출 방지)
+const tabUpdateTracking = new Map();
+
+// 탭이 새로 생성될 때 배지 확인
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.url && isInjectableUrl(tab.url)) {
+    console.log(`[Badge] 새 탭 생성: ${tab.id}, URL: ${tab.url}`);
+    updateBadgeForTab(tab.id, tab.url).catch(error => {
+      console.error(`[Badge] 새 탭 배지 설정 실패:`, error);
+    });
+  }
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status !== 'complete' && !changeInfo.url) {
+  // 탭이 완전히 로드되었을 때만 처리
+  if (changeInfo.status !== 'complete') {
     return;
   }
 
-  updateBadgeForTab(tabId, tab?.url || changeInfo.url);
+  // url 정보 확보
+  const tabUrl = tab?.url || changeInfo.url;
+  if (!tabUrl) {
+    return;
+  }
+
+  // 같은 탭에서 중복 처리 방지 (1초 내 재호출 무시)
+  const lastUpdate = tabUpdateTracking.get(tabId);
+  const now = Date.now();
+  if (lastUpdate && now - lastUpdate < 1000) {
+    console.log(`[Badge] 탭 ${tabId} 중복 업데이트 무시`);
+    return;
+  }
+
+  tabUpdateTracking.set(tabId, now);
+  console.log(`[Badge] 탭 ${tabId} 배지 업데이트 시작: ${tabUrl}`);
+
+  updateBadgeForTab(tabId, tabUrl).catch(error => {
+    console.error(`[Badge] 탭 ${tabId} 업데이트 실패:`, error);
+  });
 });
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
@@ -820,7 +874,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // RPC 요청 전역 핸들러 (팝업에서 사용)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'testConnection') {
-    testConnection(request.serverUrl).then(result => {
+    testConnection(request.serverUrl, request.username, request.password).then(result => {
       sendResponse(result);
     });
     return true; // 비동기 응답
