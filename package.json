@@ -3,6 +3,8 @@
   "version": "1.0.1",
   "private": true,
   "scripts": {
-    "build": "bash scripts/build.sh"
+    "build": "node scripts/build.js",
+    "build:unix": "bash scripts/build.sh",
+    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1"
   }
 }
