@@ -5,10 +5,10 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 ## 주요 기능
 
 - 🔗 마그넷 링크 우클릭으로 Transmission 서버에 직접 업로드
-- 📁 토렌트 파일 드래그 앤 드롭 지원
+- 🧩 페이지 내 마그넷/해시 옆 인라인 업로드 버튼 지원
 - ⚙️ Transmission 서버 설정 저장
 - 🔔 업로드 상태 알림
-- 🎛️ 직관적인 옵션 페이지
+- 🛡️ `activeTab` 기반 최소 권한 동작
 
 ## 설치 방법
 
@@ -28,18 +28,25 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 
 ### 초기 설정
 1. 확장 프로그램 아이콘 클릭
-2. Transmission 서버 정보 입력:
+2. 옵션 페이지에서 Transmission 서버 정보 입력:
    - 서버 주소 (예: `http://localhost:9091`)
    - 사용자 이름 (선택사항)
    - 비밀번호 (선택사항)
+
+### activeTab 권한 방식
+1. 확장 기능을 사용할 탭에서 확장 아이콘을 클릭
+2. 해당 탭에 컨텐츠 스크립트가 주입되고, 사이트 origin이 저장됨
+3. 저장된 사이트는 배지 `ON`으로 표시됨
+
+주의: `activeTab` 특성상 자동 상시 실행이 아니라 사용자 액션(아이콘 클릭/우클릭 메뉴 클릭) 기반으로 동작합니다.
 
 ### 마그넷 링크 업로드
 1. 마그넷 링크 우클릭
 2. "Transmission에 업로드" 선택
 
 ### 토렌트 파일 업로드
-1. 토렌트 파일을 브라우저 창으로 드래그
-2. 자동으로 Transmission에 업로드
+1. `.torrent` 링크를 우클릭
+2. "Transmission에 업로드" 선택
 
 ## 다국어 지원 (i18n)
 
@@ -99,8 +106,8 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 
 ### 기술 스택
 - **Manifest 버전:** 3 (Chrome 확장 프로그램 v3)
-- **권한:** contextMenus, storage, activeTab, notifications
-- **호스트 권한:** 모든 URL
+- **권한:** `contextMenus`, `storage`, `notifications`, `activeTab`, `scripting`
+- **호스트 권한:** 사용하지 않음 (`host_permissions` 없음)
 
 ### Transmission API
 이 확장 프로그램은 Transmission의 RPC API를 사용하여 통신합니다:
@@ -110,11 +117,22 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 
 ## 빌드 및 배포
 
-### 빌드 방법
+### 빌드 및 배포
 
-프로젝트에는 각 플랫폼에 맞는 빌드 스크립트가 포함되어 있습니다.
+### 로컬 빌드 (GitHub Pages + Release 패키지)
+```bash
+npm run build
+```
 
-#### 자동 빌드 (권장)
+빌드 결과물:
+- `dist/torrent-link-proxy-v<version>.zip` (릴리즈 업로드용)
+- `dist/pages/` (GitHub Pages 아티팩트)
+
+### 스크립트/수동 빌드
+
+프로젝트에는 플랫폼별 스크립트 빌드와 수동 빌드 방식이 모두 제공됩니다.
+
+#### 스크립트 빌드
 
 **Windows:**
 ```powershell
@@ -134,14 +152,6 @@ python3 create-release.py
 bash create-release.sh
 ```
 
-빌드 스크립트는 다음 파일들을 자동으로 포함합니다:
-- `manifest.json`
-- `background.js`, `content.js`
-- `popup.html`, `popup.js`
-- `options.html`, `options.js`
-- `icon*.svg` (아이콘 파일들)
-- `_locales/` (다국어 파일들)
-
 #### 수동 빌드
 
 수동으로 ZIP 파일을 생성하려면:
@@ -151,16 +161,20 @@ zip -r torrent-link-proxy.zip manifest.json background.js content.js popup.html 
 
 ### Chrome Web Store 배포
 
-1. 빌드 스크립트 실행 또는 수동으로 `torrent-link-proxy.zip` 생성
-2. `manifest.json` 검증 (Chrome 확장 프로그램 매니페스트 유효성 검사)
-3. [Chrome Developer Dashboard](https://chrome.google.com/webstore/developer/dashboard) 접속
-4. "새 항목" 클릭 후 생성된 ZIP 파일 업로드
-5. 검토 및 게시
+1. `manifest.json` 검증 (Chrome 확장 프로그램 매니페스트 유효성 검사)
+2. 배포용 ZIP 파일 준비:
+   - `npm run build` 결과: `dist/torrent-link-proxy-v<version>.zip`
+   - 수동/스크립트 빌드 결과: `torrent-link-proxy.zip`
+3. [Chrome Developer Dashboard](https://chrome.google.com/webstore/developer/dashboard)에서 업로드
+4. 검토 및 게시
 
 ### GitHub Pages
 프로젝트 웹사이트는 GitHub Pages에서 호스팅됩니다:
 - URL: `https://[username].github.io/[repository-name]/`
-- 자동 배포: GitHub Actions 사용
+- 자동 배포: `main` 브랜치 푸시 시 GitHub Actions 사용 (`dist/pages` 배포)
+
+### GitHub Release
+- 태그 푸시(`v*`) 시 GitHub Actions가 릴리즈 ZIP을 자동 생성/첨부합니다.
 
 ## 라이선스
 
@@ -171,6 +185,11 @@ MIT License
 기여를 환영합니다! 이슈나 풀 리퀘스트를 통해 개선사항을 제안해주세요.
 
 ## 버전 히스토리
+
+### v1.0.1
+- `activeTab` + `scripting` 기반 권한 축소
+- `npm run build` 기반 패키징/배포 파이프라인 추가
+- GitHub Pages/Release 워크플로우 정리
 
 ### v1.0.0
 - 초기 릴리즈
