@@ -33,7 +33,7 @@ def create_release_zip():
         "options.js",
         "icon16.svg",
         "icon48.svg",
-        "icon128.svg"
+        "icon128.png"
     ]
 
     print("Copying necessary files...")

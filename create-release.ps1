@@ -25,7 +25,7 @@ $filesToCopy = @(
     "options.js",
     "icon16.svg",
     "icon48.svg",
-    "icon128.svg"
+    "icon128.png"
 )
 
 foreach ($file in $filesToCopy) {

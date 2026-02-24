@@ -32,7 +32,7 @@ FILES=(
     "options.js"
     "icon16.svg"
     "icon48.svg"
-    "icon128.svg"
+    "icon128.png"
 )
 
 echo "필요한 파일들을 복사 중..."
