@@ -1,29 +1,37 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "__MSG_appDescription__",
   "default_locale": "en",
   "permissions": [
+    "activeTab",
     "contextMenus",
-    "storage",
     "notifications",
+    "storage",
     "scripting"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "options_page": "options.html",
   "action": {
+    "default_popup": "popup.html",
     "default_title": "Transmission URL Supporter"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
   "icons": {
-    "16": "icon16.svg",
-    "48": "icon48.svg",
+    "16": "icon16.png",
+    "48": "icon48.png",
     "128": "icon128.png"
   }
 }

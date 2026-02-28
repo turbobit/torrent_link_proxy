@@ -486,7 +486,23 @@ function isUrlAllowed(tabUrl, allowedUrls) {
 const ALLOWED_ORIGINS_KEY = 'activeTabAllowedOrigins';
 
 function isInjectableUrl(url) {
-  return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+  if (typeof url !== 'string') return false;
+  const lower = url.toLowerCase();
+
+  // 기본 HTTP/HTTPS 이외는 주입 불가
+  if (!(lower.startsWith('http://') || lower.startsWith('https://'))) return false;
+
+  // 내부/브라우저 전용 페이지 및 웹스토어는 스크립트 주입 금지
+  if (lower.startsWith('chrome://') ||
+      lower.startsWith('chrome-extension://') ||
+      lower.startsWith('edge://') ||
+      lower.startsWith('about:') ||
+      lower.includes('chrome.google.com/webstore') ||
+      lower.includes('extensions gallery')) {
+    return false;
+  }
+
+  return true;
 }
 
 function getOriginFromUrl(url) {
@@ -562,6 +578,25 @@ async function ensureContentScriptInjected(tabId) {
   if (!tabId) return false;
 
   try {
+    // 탭 정보를 가져와 URL 검사 (chrome:// 등 내부 페이지는 스크립팅 불가)
+    const tab = await new Promise((resolve) => chrome.tabs.get(tabId, resolve));
+    const tabUrl = tab?.url;
+
+    if (!isInjectableUrl(tabUrl)) {
+      console.log(`[Inject] 탭 ${tabId}: 주입 불가한 URL (비HTTP/HTTPS) - ${tabUrl}`);
+      return false;
+    }
+
+    // Chrome 웹스토어나 내부 페이지 등은 스크립팅 금지 대상
+    if (tabUrl.startsWith('chrome://') ||
+        tabUrl.startsWith('chrome-extension://') ||
+        tabUrl.startsWith('edge://') ||
+        tabUrl.startsWith('about:') ||
+        tabUrl.startsWith('https://chrome.google.com/webstore')) {
+      console.log(`[Inject] 탭 ${tabId}: 제한된 페이지로 스크립트 주입 건너뜀 - ${tabUrl}`);
+      return false;
+    }
+
     const probeResults = await chrome.scripting.executeScript({
       target: { tabId },
       func: () => Boolean(window.__torrentProxyContentScriptInjected)
@@ -578,7 +613,23 @@ async function ensureContentScriptInjected(tabId) {
 
     return false;
   } catch (error) {
-    console.error('Failed to inject content script:', error);
+    // chrome.runtime.lastError가 존재하면 우선 사용
+    const runtimeMsg = chrome.runtime && chrome.runtime.lastError && chrome.runtime.lastError.message;
+    const errMsg = (error && error.message) ? error.message : runtimeMsg;
+
+    // 흔한 브라우저 내부/웹스토어 스크립팅 금지 메시지는 경고로 처리
+    if (errMsg &&
+        (errMsg.includes('extensions gallery') ||
+         errMsg.toLowerCase().includes('cannot be scripted') ||
+         errMsg.toLowerCase().includes('cannot access contents') ||
+         errMsg.toLowerCase().includes('cannot access'))) {
+      console.warn('[Inject] 주입 불가 대상(브라우저 내부 또는 웹스토어):', errMsg);
+    } else if (runtimeMsg) {
+      // 기타 chrome.runtime.lastError는 정보로 남김
+      console.warn('[Inject] chrome.runtime.lastError:', runtimeMsg);
+    } else {
+      console.error('Failed to inject content script:', error);
+    }
     return false;
   }
 }

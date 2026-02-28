@@ -22,6 +22,8 @@ $extensionFiles = @(
   'popup.js',
   'options.html',
   'options.js',
+  'icon16.png',
+  'icon48.png',
   'icon16.svg',
   'icon48.svg',
   'icon128.png',
@@ -33,7 +35,10 @@ $pagesFiles = @(
   'README.md',
   'icon16.svg',
   'icon48.svg',
-  'icon128.svg'
+  'icon128.svg',
+  'icon16.png',
+  'icon48.png',
+  'icon128.png'
 )
 
 if (Test-Path $distDir) {

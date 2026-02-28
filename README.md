@@ -106,8 +106,8 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 
 ### 기술 스택
 - **Manifest 버전:** 3 (Chrome 확장 프로그램 v3)
-- **권한:** `contextMenus`, `storage`, `notifications`, `activeTab`, `scripting`
-- **호스트 권한:** 사용하지 않음 (`host_permissions` 없음)
+- **권한:** `activeTab`, `contextMenus`, `notifications`, `storage`, `scripting`
+- **호스트 권한:** `<all_urls>` (모든 URL)
 
 ### Transmission API
 이 확장 프로그램은 Transmission의 RPC API를 사용하여 통신합니다:
@@ -185,6 +185,18 @@ MIT License
 기여를 환영합니다! 이슈나 풀 리퀘스트를 통해 개선사항을 제안해주세요.
 
 ## 버전 히스토리
+
+### v1.0.3
+- PNG 아이콘(`icon16.png`, `icon48.png`, `icon128.png`)을 manifest에서 사용해 Chrome 설치 시 SVG 디코딩 오류 예방
+- `content.js`를 모든 사이트에 `run_at: document_start`로 다시 등록하고 `default_popup`을 명시해 popup 로직이 정해진 위치에서 실행되게 정리
+- `scripts/generate_icon_pngs.py`를 추가해 128px PNG에서 48px/16px를 자동으로 만들 수 있도록 지원
+
+### v1.0.4
+- content script 주입 시 브라우저 내부(웹스토어/확장 갤러리 등)를 시도할 때 발생하던 예외 처리 개선:
+  - `isInjectableUrl` 함수에서 비HTTP/HTTPS, `chrome://`, `chrome-extension://`, `edge://`, `about:`, `chrome.google.com/webstore` 등을 명시적으로 차단
+  - 주입 실패 시 `chrome.runtime.lastError`와 에러 메시지 패턴을 확인해 웹스토어/내부 페이지 관련 오류는 경고로 처리하도록 변경
+- 빌드 스크립트(build.sh / build.ps1)에서 PNG와 SVG를 모두 포함하도록 보완
+- 패키지 버전 및 매니페스트 버전 업데이트 (v1.0.4)
 
 ### v1.0.1
 - `activeTab` + `scripting` 기반 권한 축소
