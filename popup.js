@@ -1,19 +1,33 @@
-// i18n 메시지 로드 유틸리티 함수
+// i18n 메시지 로드 유틸리티 함수 (폴백 처리 포함)
 function loadI18nMessages() {
+  const fallbacks = {
+    popupTitle: 'Transmission URL Supporter',
+    serverStatus: 'Server Status:',
+    serverUrl: 'Server URL:',
+    checking: 'Checking...',
+    checkConnection: 'Check Connection',
+    checkingConnection: 'Checking...',
+    instructions: 'Instructions:',
+    instruction1: '1. Set Transmission server URL',
+    instruction2: '2. Select torrent link or hash',
+    instruction3: '3. Right-click menu > "Upload to Transmission"',
+    statusConnected: 'Connected',
+    statusDisconnected: 'Disconnected'
+  };
+
   const elements = document.querySelectorAll('[data-i18n]');
   elements.forEach(element => {
     const messageKey = element.getAttribute('data-i18n');
-    const message = chrome.i18n.getMessage(messageKey);
+    const message = chrome.i18n.getMessage(messageKey) || fallbacks[messageKey];
     if (message) {
       element.textContent = message;
     }
   });
 
-  // placeholder 속성 처리
   const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
   placeholderElements.forEach(element => {
     const messageKey = element.getAttribute('data-i18n-placeholder');
-    const message = chrome.i18n.getMessage(messageKey);
+    const message = chrome.i18n.getMessage(messageKey) || fallbacks[messageKey];
     if (message) {
       element.placeholder = message;
     }
@@ -63,16 +77,17 @@ function requestHostPermissions(serverUrl) {
   });
 }
 
-// Transmission 서버 연결 테스트
+// Transmission 서버 연결 테스트 (10초 타임아웃)
 async function testConnection(serverUrl, username, password) {
   return new Promise((resolve) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     let rpcUrl = serverUrl;
     if (!rpcUrl.endsWith('/')) {
       rpcUrl += '/';
     }
     rpcUrl += 'rpc';
-
-    let sessionId = null;
 
     const request = {
       jsonrpc: '2.0',
@@ -84,28 +99,26 @@ async function testConnection(serverUrl, username, password) {
       'Content-Type': 'application/json',
     };
 
-    if (username || password) {
-      try {
-        const base64Credentials = btoa(`${username}:${password}`);
-        headers['Authorization'] = `Basic ${base64Credentials}`;
-      } catch (e) {
-        // btoa 실패 시 무시
-      }
+    if (username && password) {
+      const base64Credentials = btoa(`${username}:${password}`);
+      headers['Authorization'] = `Basic ${base64Credentials}`;
     }
 
     fetch(rpcUrl, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify(request)
+      body: JSON.stringify(request),
+      signal: controller.signal
     })
     .then(response => {
       if (response.status === 409) {
-        sessionId = response.headers.get('X-Transmission-Session-Id');
+        const sessionId = response.headers.get('X-Transmission-Session-Id');
         headers['X-Transmission-Session-Id'] = sessionId;
         return fetch(rpcUrl, {
           method: 'POST',
           headers: headers,
-          body: JSON.stringify(request)
+          body: JSON.stringify(request),
+          signal: controller.signal
         });
       }
       return response;
@@ -116,17 +129,21 @@ async function testConnection(serverUrl, username, password) {
           return { success: true, version: data.result?.version };
         });
       }
-      return response.text().then(text => {
+      return response.text().then(() => {
         throw new Error(`HTTP ${response.status}`);
       });
     })
     .catch(error => {
+      if (error.name === 'AbortError') {
+        return { success: false, error: '연결 시간 초과 (10초)' };
+      }
       if (error.message.includes('401') || error.message.includes('403')) {
         return { success: false, error: '인증 실패' };
       }
       return { success: false, error: error.message };
     })
     .then(result => {
+      clearTimeout(timeoutId);
       resolve(result);
     });
   });
