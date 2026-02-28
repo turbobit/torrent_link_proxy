@@ -299,84 +299,49 @@ function createContextMenus() {
   });
 }
 
-// 시스템 알림 표시
+// 시스템 알림 표시 (비활성화됨)
 function showNotification(title, message) {
-  try {
-    // title과 message가 유효한지 확인
-    if (!title || !message) {
-      console.warn('[Notification] ⚠️ 알림 제목 또는 메시지가 비어있음:', { title, message });
-      return;
-    }
-
-    chrome.notifications.create('torrent-' + Date.now(), {
-      type: 'basic',
-      title: title,
-      message: message,
-      iconUrl: 'icon48.svg'
-    }, (notificationId) => {
-      // 알림 생성 완료
-      if (chrome.runtime.lastError) {
-        console.error('[Notification] ❌ 알림 생성 실패:', chrome.runtime.lastError.message);
-      } else {
-        console.log('[Notification] ✅ 알림 생성 성공:', notificationId);
-      }
-    });
-  } catch (error) {
-    console.error('[Notification] ❌ 알림 생성 예외:', error.message);
+  // 알림 기능은 제거됨
+  if (title && message) {
+    console.log(`[Notification] 알림: ${title} - ${message}`);
   }
 }
 
-// 사용자 설정에 따라 결과 표시 (badge, notification, console)
+// 사용자 설정에 따라 결과 표시 (badge만 사용, notification 제거됨)
 async function showResultNotification(status, message, options = {}) {
   const settings = await getSettings();
-  const notificationStyles = settings.notificationStyles || ['badge', 'notification'];
   const isError = status === 'error';
   const isDuplicate = status === 'duplicate';
   const isProcessing = status === 'processing';
 
-  // Badge 표시 (설정에서 활성화된 경우)
-  if (notificationStyles.includes('badge')) {
-    let badgeText = '✓';
-    let badgeColor = '#00aa00';
+  // Badge 표시 (결과 알림 용도)
+  let badgeText = '✓';
+  let badgeColor = '#00aa00';
 
-    if (isError) {
-      badgeText = '!';
-      badgeColor = '#ff0000';
-    } else if (isDuplicate) {
-      badgeText = '⚠';
-      badgeColor = '#FFA500';
-    } else if (isProcessing) {
-      badgeText = '⊙';
-      badgeColor = '#4a90d9';
-    }
-
-    chrome.action.setBadgeText({ text: badgeText });
-    chrome.action.setBadgeBackgroundColor({ color: badgeColor });
-
-    // Processing 상태는 자동 지우지 않음 (결과 상태로 업데이트됨)
-    if (!isProcessing) {
-      setTimeout(() => {
-        chrome.action.setBadgeText({ text: '' });
-      }, 2000);
-    }
+  if (isError) {
+    badgeText = '!';
+    badgeColor = '#ff0000';
+  } else if (isDuplicate) {
+    badgeText = '⚠';
+    badgeColor = '#FFA500';
+  } else if (isProcessing) {
+    badgeText = '⊙';
+    badgeColor = '#4a90d9';
   }
 
-  // 시스템 알림 표시 (설정에서 활성화된 경우)
-  if (notificationStyles.includes('notification')) {
-    let title = 'Transmission';
-    if (isError) {
-      title = 'Transmission - 오류';
-    } else if (isProcessing) {
-      title = 'Transmission - 처리 중';
-    }
-    showNotification(title, message);
+  chrome.action.setBadgeText({ text: badgeText });
+  chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+  // Processing 상태는 자동 지우지 않음 (결과 상태로 업데이트됨)
+  if (!isProcessing) {
+    setTimeout(() => {
+      chrome.action.setBadgeText({ text: '' });
+    }, 2000);
   }
 
-  // 콘솔 로그 출력 (설정에서 활성화된 경우)
-  if (notificationStyles.includes('console')) {
-    const logLevel = isError ? 'error' : 'log';
-    console[logLevel](`[Transmission Result - ${status}]:`, message, options);
-  }
+  // 콘솔 로그 출력
+  const logLevel = isError ? 'error' : 'log';
+  console[logLevel](`[Transmission Result - ${status}]:`, message, options);
 }
 
 // Magnet link 또는 torrent file을 Transmission에 추가
@@ -538,6 +503,56 @@ async function rememberAllowedOrigin(origin) {
   }
 }
 
+// allowedUrls에 도메인 추가 (origin 기반)
+async function addToAllowedUrls(origin) {
+  return new Promise((resolve) => {
+    try {
+      // origin을 도메인으로 변환 (예: https://example.com -> example.com)
+      let domain = origin;
+      try {
+        const url = new URL(origin);
+        domain = url.hostname;
+      } catch (e) {
+        console.error('[AddAllowedUrls] URL 파싱 오류:', e);
+        resolve(false);
+        return;
+      }
+
+      chrome.storage.sync.get('allowedUrls', (data) => {
+        if (chrome.runtime.lastError) {
+          console.error('[AddAllowedUrls] Storage 읽기 오류:', chrome.runtime.lastError);
+          resolve(false);
+          return;
+        }
+
+        const allowedUrls = data.allowedUrls || [];
+
+        // 이미 추가되었으면 무시
+        if (allowedUrls.includes(domain)) {
+          console.log('[AddAllowedUrls] 이미 추가됨:', domain);
+          resolve(false);
+          return;
+        }
+
+        // 새로 추가
+        allowedUrls.push(domain);
+        chrome.storage.sync.set({ allowedUrls: allowedUrls }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('[AddAllowedUrls] Storage 저장 오류:', chrome.runtime.lastError);
+            resolve(false);
+            return;
+          }
+          console.log('[AddAllowedUrls] ✅ 추가됨:', domain);
+          resolve(true);
+        });
+      });
+    } catch (error) {
+      console.error('[AddAllowedUrls] 예외 오류:', error);
+      resolve(false);
+    }
+  });
+}
+
 async function updateBadgeForTab(tabId, tabUrl) {
   try {
     const origin = getOriginFromUrl(tabUrl);
@@ -546,21 +561,43 @@ async function updateBadgeForTab(tabId, tabUrl) {
       return;
     }
 
-    console.log(`[Badge] 탭 ${tabId}: origin 확인 중 (${origin})`);
+    console.log(`[Badge] 탭 ${tabId}: 배지 상태 확인 중 (${origin})`);
 
+    // allowedOrigins 또는 allowedUrls에 있으면 허용
     const origins = await getAllowedOrigins();
-    const isAllowed = origins.includes(origin);
+    const url = new URL(origin);
+    const domain = url.hostname;
 
-    console.log(`[Badge] 탭 ${tabId}: isAllowed=${isAllowed}, 현재 허용 origins=${origins.length}개`);
+    // allowedUrls 확인
+    let allowedUrls = [];
+    try {
+      const data = await new Promise((resolve) => {
+        chrome.storage.sync.get('allowedUrls', resolve);
+      });
+      allowedUrls = data.allowedUrls || [];
+    } catch (e) {
+      console.error(`[Badge] allowedUrls 로드 실패:`, e);
+    }
+
+    const isAllowedByOrigin = origins.includes(origin);
+    const isAllowedByUrl = allowedUrls.includes(domain);
+    const isAllowed = isAllowedByOrigin || isAllowedByUrl;
+
+    console.log(`[Badge] 탭 ${tabId}: origin=${isAllowedByOrigin}, url=${isAllowedByUrl}, 결과=${isAllowed}`);
 
     if (isAllowed) {
       // 배지 설정 (ON)
       chrome.action.setBadgeText({ tabId, text: 'ON' });
       chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f855a' });
-      console.log(`[Badge] 탭 ${tabId}: 배지 ON 설정 완료`);
+      console.log(`[Badge] 탭 ${tabId}: ✅ 배지 ON 설정 완료`);
 
-      // 주입은 사용자 트리거(아이콘 클릭 또는 컨텍스트 메뉴)에서만 수행됩니다.
-      console.log(`[Badge] 탭 ${tabId}: content script 주입은 사용자 트리거에서만 실행됩니다.`);
+      // allowedUrls에 있으면 content script 자동 주입 (우클릭 메뉴가 정상 작동하도록)
+      if (isAllowedByUrl) {
+        console.log(`[Badge] 탭 ${tabId}: allowedUrls에 있음. content script 자동 주입 시작`);
+        await ensureContentScriptInjected(tabId);
+      } else {
+        console.log(`[Badge] 탭 ${tabId}: content script 주입은 사용자 트리거 또는 allowedUrls에서 실행됩니다.`);
+      }
     } else {
       // 배지 초기화 (허용되지 않음)
       chrome.action.setBadgeText({ tabId, text: '' });
@@ -632,16 +669,78 @@ async function ensureContentScriptInjected(tabId) {
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab?.id || !isInjectableUrl(tab.url)) {
+  if (!tab?.id) {
+    console.log('[Badge Click] 탭 ID 없음');
     return;
   }
 
-  const origin = getOriginFromUrl(tab.url);
-  if (!origin) return;
+  // tab.url이 없으면 chrome.tabs.query()로 현재 탭 정보 가져오기
+  let tabUrl = tab.url;
+  if (!tabUrl) {
+    try {
+      const tabs = await new Promise((resolve) => {
+        chrome.tabs.query({ currentWindow: true, active: true }, (foundTabs) => {
+          resolve(foundTabs);
+        });
+      });
+      if (tabs && tabs.length > 0) {
+        tabUrl = tabs[0].url;
+        console.log('[Badge Click] 활성 탭 URL 조회됨:', tabUrl);
+      }
+    } catch (e) {
+      console.error('[Badge Click] 탭 조회 실패:', e);
+    }
+  }
 
+  if (!tabUrl || !isInjectableUrl(tabUrl)) {
+    console.log('[Badge Click] 주입 불가능한 URL:', tabUrl);
+    return;
+  }
+
+  const origin = getOriginFromUrl(tabUrl);
+  if (!origin) {
+    console.log('[Badge Click] Origin 추출 실패:', tabUrl);
+    return;
+  }
+
+  console.log('[Badge Click] 배지 클릭됨:', origin);
+
+  // 호스트 권한 요청
+  const url = new URL(origin);
+  const protocol = url.protocol;
+  const host = url.hostname;
+  const permissions = {
+    origins: [`${protocol}//${host}/*`]
+  };
+
+  const granted = await new Promise((resolve) => {
+    chrome.permissions.request(permissions, (permissionGranted) => {
+      console.log('[Badge Click] 권한 요청 결과:', permissionGranted);
+      resolve(permissionGranted);
+    });
+  });
+
+  if (!granted) {
+    console.log('[Badge Click] 권한이 거부되었습니다');
+    return;
+  }
+
+  console.log('[Badge Click] ✅ 권한 승인됨:', host);
+
+  // allowedOrigins에 추가 (배지 상태 유지용)
   await rememberAllowedOrigin(origin);
+  console.log('[Badge Click] allowedOrigins 추가 완료');
+
+  // allowedUrls에도 추가 (동작 URL 목록)
+  await addToAllowedUrls(origin);
+  console.log('[Badge Click] allowedUrls 추가 완료');
+
+  // 배지 즉시 업데이트 (ON으로 표시)
+  chrome.action.setBadgeText({ tabId: tab.id, text: 'ON' });
+  chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: '#2f855a' });
+  console.log('[Badge Click] ✅ 배지 ON 설정 완료:', tab.id);
+
   await ensureContentScriptInjected(tab.id);
-  await updateBadgeForTab(tab.id, tab.url);
 });
 
 // 탭별 업데이트 추적 (중복 호출 방지)

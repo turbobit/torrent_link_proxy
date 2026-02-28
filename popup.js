@@ -126,7 +126,9 @@ async function testConnection(serverUrl, username, password) {
     .then(response => {
       if (response.ok) {
         return response.json().then(data => {
-          return { success: true, version: data.result?.version };
+          // Transmission RPC 응답 형식: version은 arguments에 있음
+          const version = data.arguments?.version || data.result?.version;
+          return { success: true, version: version };
         });
       }
       return response.text().then(() => {

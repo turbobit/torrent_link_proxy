@@ -8,15 +8,15 @@
     "contextMenus",
     "notifications",
     "storage",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
- 
+
   "background": {
     "service_worker": "background.js"
   },
   "options_page": "options.html",
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Transmission URL Supporter"
   },
   "optional_host_permissions": [
