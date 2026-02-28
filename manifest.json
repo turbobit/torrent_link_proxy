@@ -11,9 +11,7 @@
     "storage",
     "scripting"
   ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+ 
   "background": {
     "service_worker": "background.js"
   },
@@ -22,13 +20,11 @@
     "default_popup": "popup.html",
     "default_title": "Transmission URL Supporter"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_start"
-    }
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ],
+ 
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",

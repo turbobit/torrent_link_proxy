@@ -34,6 +34,35 @@ function getSettings() {
   });
 }
 
+// 호스트 권한 요청
+function requestHostPermissions(serverUrl) {
+  return new Promise((resolve) => {
+    try {
+      const url = new URL(serverUrl);
+      const host = url.hostname;
+      const protocol = url.protocol; // https: or http:
+
+      const permissions = {
+        origins: [
+          `${protocol}//${host}/*`
+        ]
+      };
+
+      chrome.permissions.request(permissions, (granted) => {
+        if (chrome.runtime.lastError) {
+          console.error('[Permission] 권한 요청 오류:', chrome.runtime.lastError.message);
+          resolve(false);
+        } else {
+          resolve(granted);
+        }
+      });
+    } catch (error) {
+      console.error('[Permission] 유효하지 않은 URL:', error);
+      resolve(false);
+    }
+  });
+}
+
 // Transmission 서버 연결 테스트
 async function testConnection(serverUrl, username, password) {
   return new Promise((resolve) => {
@@ -135,27 +164,48 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 연결 확인 버튼
-  checkBtn.addEventListener('click', () => {
+  checkBtn.addEventListener('click', async () => {
     checkLoading.style.display = 'inline-block';
     checkText.style.display = 'none';
 
-    getSettings().then(settings => {
-      testConnection(settings.serverUrl, settings.username, settings.password)
-        .then(result => {
-          checkLoading.style.display = 'none';
-          checkText.style.display = 'inline-block';
+    const settings = await getSettings();
 
-          if (result.success) {
-            statusDiv.className = 'status connected';
-            serverStatusEl.textContent = `연결됨 (v${result.version})`;
-            serverStatusEl.style.color = '#28a745';
-          } else {
-            statusDiv.className = 'status error';
-            serverStatusEl.textContent = `오류: ${result.error}`;
-            serverStatusEl.style.color = '#dc3545';
-          }
-        });
-    });
+    // 서버 URL이 없으면 오류 표시
+    if (!settings.serverUrl) {
+      checkLoading.style.display = 'none';
+      checkText.style.display = 'inline-block';
+      statusDiv.className = 'status error';
+      serverStatusEl.textContent = '서버 URL이 설정되지 않았습니다';
+      serverStatusEl.style.color = '#dc3545';
+      return;
+    }
+
+    // 권한 요청
+    const hasPermission = await requestHostPermissions(settings.serverUrl);
+    if (!hasPermission) {
+      checkLoading.style.display = 'none';
+      checkText.style.display = 'inline-block';
+      statusDiv.className = 'status error';
+      serverStatusEl.textContent = '권한이 거부되었습니다';
+      serverStatusEl.style.color = '#dc3545';
+      return;
+    }
+
+    testConnection(settings.serverUrl, settings.username, settings.password)
+      .then(result => {
+        checkLoading.style.display = 'none';
+        checkText.style.display = 'inline-block';
+
+        if (result.success) {
+          statusDiv.className = 'status connected';
+          serverStatusEl.textContent = `연결됨 (v${result.version})`;
+          serverStatusEl.style.color = '#28a745';
+        } else {
+          statusDiv.className = 'status error';
+          serverStatusEl.textContent = `오류: ${result.error}`;
+          serverStatusEl.style.color = '#dc3545';
+        }
+      });
   });
 
   // 설정 버튼 클릭 (새 탭에서 설정 페이지 열기)

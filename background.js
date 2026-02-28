@@ -559,11 +559,8 @@ async function updateBadgeForTab(tabId, tabUrl) {
       chrome.action.setBadgeBackgroundColor({ tabId, color: '#2f855a' });
       console.log(`[Badge] 탭 ${tabId}: 배지 ON 설정 완료`);
 
-      // Content script 주입 시도
-      if (tabId) {
-        const injected = await ensureContentScriptInjected(tabId);
-        console.log(`[Badge] 탭 ${tabId}: Content script ${injected ? '새로 주입' : '이미 존재'}`);
-      }
+      // 주입은 사용자 트리거(아이콘 클릭 또는 컨텍스트 메뉴)에서만 수행됩니다.
+      console.log(`[Badge] 탭 ${tabId}: content script 주입은 사용자 트리거에서만 실행됩니다.`);
     } else {
       // 배지 초기화 (허용되지 않음)
       chrome.action.setBadgeText({ tabId, text: '' });

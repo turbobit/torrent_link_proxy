@@ -230,7 +230,17 @@ document.addEventListener('DOMContentLoaded', () => {
       inlineButton: inlineButtonInput.checked
     });
 
-    saveSettings({
+    // 요청할 호스트 권한 패턴 생성 (origin/*)
+    let originPattern = null;
+    try {
+      const origin = new URL(serverUrl).origin;
+      originPattern = origin.replace(/\/$/, '') + '/*';
+    } catch (e) {
+      console.warn('[Permissions] ⚠️ origin 패턴 생성 실패:', e);
+    }
+
+    // 권한 요청 (가능한 경우)
+    const requestSave = () => saveSettings({
       serverUrl: serverUrl,
       username: username,
       password: password,
@@ -243,6 +253,25 @@ document.addEventListener('DOMContentLoaded', () => {
       // 메뉴 업데이트 메시지 전송
       chrome.runtime.sendMessage({ action: 'updateMenu' });
     });
+
+    if (originPattern && chrome.permissions && chrome.permissions.request) {
+      console.log('[Permissions] 🔐 요청할 origin 패턴:', originPattern);
+      chrome.permissions.request({ origins: [originPattern] }, (granted) => {
+        if (granted) {
+          console.log('[Permissions] ✅ 호스트 권한 승인됨:', originPattern);
+          requestSave();
+        } else {
+          console.warn('[Permissions] ❌ 호스트 권한 거부됨:', originPattern);
+          // 권한이 없으면 저장은 하되 사용자에게 안내
+          requestSave().then(() => {
+            showErrorMessage('호스트 권한이 허용되지 않았습니다. 일부 기능이 제한될 수 있습니다.');
+          });
+        }
+      });
+    } else {
+      // 권한 API가 없거나 originPattern 생성 실패 시 그냥 저장
+      requestSave();
+    }
   });
 
   // 연결 테스트 버튼 클릭

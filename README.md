@@ -107,7 +107,7 @@ Chrome 확장 프로그램으로 마그넷 링크와 토렌트 파일을 Transmi
 ### 기술 스택
 - **Manifest 버전:** 3 (Chrome 확장 프로그램 v3)
 - **권한:** `activeTab`, `contextMenus`, `notifications`, `storage`, `scripting`
-- **호스트 권한:** `<all_urls>` (모든 URL)
+- **호스트 권한:** 없음 (프로그램적 주입은 사용자 트리거와 `activeTab` 기반으로 동작)
 
 ### Transmission API
 이 확장 프로그램은 Transmission의 RPC API를 사용하여 통신합니다:
