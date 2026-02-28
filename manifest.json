@@ -6,7 +6,6 @@
   "default_locale": "en",
   "permissions": [
     "contextMenus",
-    "notifications",
     "storage",
     "scripting",
     "tabs"
