@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.js",
+    "build:deploy": "node scripts/build.js --push",
     "build:unix": "bash scripts/build.sh",
     "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1"
   }
